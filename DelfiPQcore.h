@@ -10,6 +10,7 @@
 
 #include <driverlib.h>
 #include "msp.h"
+#include "Task.h"
 
 #define FCLOCK 48000000
 
@@ -17,6 +18,7 @@ class DelfiPQcore
 {
 public:
     static void initMCU();
+    static void startTaskManager( Task **tasks, int tasksCount);
 };
 
 #endif /* DELFIPQCORE_H_ */

@@ -27,3 +27,17 @@ void DelfiPQcore::initMCU()
     MAP_CS_initClockSignal(CS_HSMCLK, CS_HFXTCLK_SELECT, CS_CLOCK_DIVIDER_2);
 
 }
+
+void DelfiPQcore::startTaskManager( Task **tasks, const int tasksCount)
+{
+    while(true)
+    {
+        for (int i = 0; i < tasksCount; i++)
+        {
+            tasks[i]->executeTask();
+        }
+        // low-power mode currently disabled
+        // TODO: RS485 frames lost sometimes when low-power mode enables
+        //MAP_PCM_gotoLPM0();
+    }
+}
