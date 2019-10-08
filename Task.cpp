@@ -7,8 +7,16 @@
 
 #include "Task.h"
 
-Task::Task( void (&function)( void ) ) :
-            userFunction(function) {}
+static void placeholderCallback( void )
+{
+
+}
+
+Task::Task( void (&function)( void ), void (&init)( void ) ) :
+            userFunction(function), initializer(init) {}
+
+Task::Task( void (&function)( void )) :
+            userFunction(function), initializer(placeholderCallback) {}
 
 void Task::notify( void )
 {
@@ -30,4 +38,9 @@ void Task::executeTask()
             userFunction();
         }
     }
+}
+
+void Task::setUp()
+{
+    initializer();
 }

@@ -9,13 +9,19 @@
 
 PeriodicTask *instance;
 
+static void placeholderCallback( void )
+{
+
+}
+
 void timerHandler(void)
 {
     MAP_Timer32_clearInterruptFlag(TIMER32_0_BASE);
     instance->notify();
 }
 
-PeriodicTask::PeriodicTask(const unsigned int count, void (&function)( void )) : Task(function)
+PeriodicTask::PeriodicTask(const unsigned int count, void (&function)( void ), void (&init)( void )) :
+        Task(function, init)
 {
     instance = this;
     // Configuring Timer32 to FCLOCK (1s) of MCLK in periodic mode
@@ -25,3 +31,6 @@ PeriodicTask::PeriodicTask(const unsigned int count, void (&function)( void )) :
     MAP_Timer32_setCount(TIMER32_0_BASE, count);
     MAP_Timer32_startTimer(TIMER32_0_BASE, false);
 }
+
+PeriodicTask::PeriodicTask(const unsigned int count, void (&function)( void )) :
+        PeriodicTask(count, function, placeholderCallback) {}

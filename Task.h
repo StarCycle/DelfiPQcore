@@ -13,13 +13,16 @@ class Task
  protected:
     volatile bool execute = false;
     void (&userFunction)( void );
+    void (&initializer)( void );
 
  public:
     Task( void (&function)( void ) );
+    Task( void (&function)( void ), void (&init)( void ) );
     virtual ~Task( ) {};
     virtual void notify( void );
     virtual bool notified();
     virtual void executeTask();
+    virtual void setUp();
 };
 
 #endif /* TASK_H_ */

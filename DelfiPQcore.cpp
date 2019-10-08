@@ -30,6 +30,13 @@ void DelfiPQcore::initMCU()
 
 void DelfiPQcore::startTaskManager( Task **tasks, const int tasksCount)
 {
+    // run the initialization code first
+    for (int i = 0; i < tasksCount; i++)
+    {
+        tasks[i]->setUp();
+    }
+
+    // run the tasks in a sequence
     while(true)
     {
         for (int i = 0; i < tasksCount; i++)
