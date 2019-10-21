@@ -9,7 +9,7 @@
  *
  */
 
-#include "PQ9CommandHandler.h"
+#include <CommandHandler.h>
 
 extern DSerial serial;
 

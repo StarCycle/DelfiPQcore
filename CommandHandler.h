@@ -5,8 +5,8 @@
  *      Author: stefanosperett
  */
 
-#ifndef PQ9COMMANDHANDLER_H_
-#define PQ9COMMANDHANDLER_H_
+#ifndef COMMANDHANDLER_H_
+#define COMMANDHANDLER_H_
 
 #include "PQ9Frame.h"
 #include "Service.h"
@@ -30,4 +30,4 @@ class PQ9CommandHandler: public Task
      void onValidCommand(void (*function)( void ));
 };
 
-#endif /* PQ9COMMANDHANDLER_H_ */
+#endif /* COMMANDHANDLER_H_ */
