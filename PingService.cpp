@@ -6,6 +6,8 @@
  */
 #include "PingService.h"
 
+extern DSerial serial;
+
 bool PingService::process(PQ9Frame &command, PQ9Bus &interface, PQ9Frame &workingBuffer)
 {
     if (command.getPayload()[0] == PING_SERVICE)
@@ -18,6 +20,7 @@ bool PingService::process(PQ9Frame &command, PQ9Bus &interface, PQ9Frame &workin
 
         if (command.getPayload()[1] == PING_REQUEST)
         {
+            serial.println("PingService: Ping Request");
             // respond to ping
             workingBuffer.getPayload()[1] = PING_RESPONSE;
         }

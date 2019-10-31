@@ -11,6 +11,7 @@
 #include "PQ9Bus.h"
 #include "PQ9Frame.h"
 #include "Service.h"
+#include "DSerial.h"
 
 #define PING_SERVICE            17
 #define PING_ERROR               0

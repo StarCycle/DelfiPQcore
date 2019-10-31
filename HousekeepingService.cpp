@@ -20,6 +20,8 @@ bool HousekeepingService::process(PQ9Frame &command, PQ9Bus &interface, PQ9Frame
 
         if (command.getPayload()[1] == HOUSEKEEPING_REQUEST)
         {
+            serial.println("HousekeepingService: Request");
+
             // respond to housekeeping request
             workingBuffer.getPayload()[1] = HOUSEKEEPING_RESPONSE;
             for (int i = 0; i < getContainerToRead()->size(); i++)

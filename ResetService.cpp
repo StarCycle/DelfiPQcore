@@ -19,7 +19,8 @@ extern DSerial serial;
 
 void resetHandler()
 {
-    // TODO: replace this with a powercycle to protect also the RS485 driver
+    serial.println("ResetService: internal watch-dog reset...");
+    // TODO: replace this with a power cycle to protect also the RS485 driver
     // for now, at least reset, till the power cycle gets implemented in HW
     MAP_SysCtl_rebootDevice();
 }
@@ -82,6 +83,7 @@ bool ResetService::process(PQ9Frame &command, PQ9Bus &interface, PQ9Frame &worki
 
         if ((command.getPayloadSize() == 3) && (command.getPayload()[1] == RESET_REQUEST))
         {
+            serial.println("ResetService: Reset");
             workingBuffer.getPayload()[2] = command.getPayload()[2];
             switch(command.getPayload()[2])
             {
