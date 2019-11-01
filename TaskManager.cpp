@@ -16,7 +16,7 @@ void TaskManager::start()
     {
         for (int i = 0; i < tasksCount; i++)
         {
-            tasks[0]->executeTask();
+            tasks[i]->executeTask();
         }
 
         //MAP_PCM_gotoLPM0();
