@@ -84,6 +84,10 @@ bool PQ9CommandHandler::handleCommands()
         }
         else
         {
+            if (onValidCmd)
+            {
+                onValidCmd();
+            }
             return true;
         }
     }

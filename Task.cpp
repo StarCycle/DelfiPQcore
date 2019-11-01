@@ -32,11 +32,11 @@ void Task::executeTask()
 {
     if (execute)
     {
-        execute = false;
         if (userFunction)
         {
             userFunction();
         }
+        execute = false;
     }
 }
 

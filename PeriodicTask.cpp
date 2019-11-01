@@ -7,7 +7,7 @@
 
 #include <PeriodicTask.h>
 
-PeriodicTask *instance;
+PeriodicTask *instanceTimerTask;
 
 static void placeholderCallback( void )
 {
@@ -17,13 +17,13 @@ static void placeholderCallback( void )
 void timerHandler(void)
 {
     MAP_Timer32_clearInterruptFlag(TIMER32_0_BASE);
-    instance->notify();
+    instanceTimerTask->notify();
 }
 
 PeriodicTask::PeriodicTask(const unsigned int count, void (&function)( void ), void (&init)( void )) :
         Task(function, init)
 {
-    instance = this;
+    instanceTimerTask = this;
     // Configuring Timer32 to FCLOCK (1s) of MCLK in periodic mode
     MAP_Timer32_initModule(TIMER32_0_BASE, TIMER32_PRESCALER_1, TIMER32_32BIT,
             TIMER32_PERIODIC_MODE);
