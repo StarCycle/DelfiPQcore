@@ -17,19 +17,18 @@
 class PQ9CommandHandler: public Task
 {
  protected:
-     //PQ9Bus &bus;
-     //Service** services;
-     //int servicesCount;
-
-     //void (*onValidCmd)( void );
-     //friend void stubCommandHandler( );
+     PQ9Bus &bus;
+     Service** services;
+     int servicesCount;
+     PQ9Frame rxBuffer, txBuffer;
+     void (*onValidCmd)( void );
+     friend void stubCommandHandler( );
+     bool handleCommands();
 
  public:
      PQ9CommandHandler( PQ9Bus &bus, Service **servArray, int count );
      void received( PQ9Frame &newFrame );
      void onValidCommand(void (*function)( void ));
-     void (*onValidCmd)( void );
-     bool handleCommands();
 };
 
 #endif /* COMMANDHANDLER_H_ */
