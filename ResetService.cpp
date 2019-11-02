@@ -5,14 +5,6 @@
  *      Author: stefanosperett
  */
 
-
-/*
- * SoftwareUpdateService.cpp
- *
- *  Created on: 27 Jul 2019
- *      Author: stefanosperett
- */
-
 #include "ResetService.h"
 
 extern DSerial serial;
