@@ -9,6 +9,7 @@
 
 extern DSerial serial;
 
+template <class tlmType>
 bool HousekeepingService::process(PQ9Frame &command, PQ9Bus &interface, PQ9Frame &workingBuffer)
 {
     if (command.getPayload()[0] == HOUSEKEEPING_SERVICE)
@@ -50,6 +51,19 @@ bool HousekeepingService::process(PQ9Frame &command, PQ9Bus &interface, PQ9Frame
     }
 }
 
+template <class tlmType>
+tlmType* HousekeepingService::getContainerToRead()
+{
+    return &(telemetryContainer[(telemetryIndex + 1) % 2]);
+};
+
+template <class tlmType>
+tlmType* HousekeepingService::getContainerToWrite()
+{
+    return &(telemetryContainer[telemetryIndex]);
+};
+
+template <class tlmType>
 void HousekeepingService::stageTelemetry()
 {
     telemetryIndex++;

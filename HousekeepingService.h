@@ -18,16 +18,22 @@
 #define HOUSEKEEPING_REQUEST             1
 #define HOUSEKEEPING_RESPONSE            2
 
+template <class tlmType>
 class HousekeepingService: public Service
 {
 protected:
     int telemetryIndex = 0;
+    tlmType telemetryContainer[2];
+
+    void stageTelemetry();
 
  public:
+    HousekeepingService();
+    virtual ~HousekeepingService();
     bool process( PQ9Frame &command, PQ9Bus &interface, PQ9Frame &workingBbuffer );
-    void stageTelemetry();
-    virtual TelemetryContainer* getContainerToRead();
-    virtual TelemetryContainer* getContainerToWrite();
+    tlmType* getContainerToRead();
+    tlmType* getContainerToWrite();
+
 };
 
 #endif /* HOUSEKEEPINGSERVICE_H_ */
