@@ -86,7 +86,7 @@ protected:
         }
     }
 
-    virtual T* getTelemetry()
+    T* getTelemetry()
     {
         return &(telemetryContainer[(telemetryIndex + 1) % 2]);
     }
