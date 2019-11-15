@@ -14,12 +14,34 @@ static void placeholderCallback( void )
 
 }
 
+/**
+ *
+ *   Handler that gets called Periodically by the Timer
+ *
+ *   Parameters:
+ *
+ *   Returns:
+ *
+ *
+ */
 void timerHandler(void)
 {
     MAP_Timer32_clearInterruptFlag(TIMER32_0_BASE);
     instanceTimerTask->notify();
 }
 
+/**
+ *
+ *   Construct PeriodicTask (extends Task)
+ *
+ *   Parameters:
+ *      const unsigned int count        Count value set in the counter (Initial value to countdown from)
+ *      void (*function)                The function to Execute
+ *      void (*init)                    The Initialiser of the Function
+ *   Returns:
+ *
+ *
+ */
 PeriodicTask::PeriodicTask(const unsigned int count, void (*function)( void ), void (&init)( void )) :
         Task(function, init)
 {
@@ -32,5 +54,16 @@ PeriodicTask::PeriodicTask(const unsigned int count, void (*function)( void ), v
     MAP_Timer32_startTimer(TIMER32_0_BASE, false);
 }
 
+/**
+ *
+ *   Construct PeriodicTask (extends Task)
+ *
+ *   Parameters:
+ *      void (*function)                The function to Execute
+ *      void (*init)                    The Initialiser of the Function
+ *   Returns:
+ *
+ *
+ */
 PeriodicTask::PeriodicTask(const unsigned int count, void (*function)( void )) :
         PeriodicTask(count, function, placeholderCallback) {}

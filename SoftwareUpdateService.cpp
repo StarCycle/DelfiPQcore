@@ -9,6 +9,20 @@
 
 extern DSerial serial;
 
+/**
+ *
+ *   Process the Service (Called by CommandHandler)
+ *
+ *   Parameters:
+ *   PQ9Frame &command          Frame received over the bus
+ *   PQ9Bus &interface          Bus object
+ *   PQ9Frame &workingBuffer    Reference to buffer to store the response.
+ *
+ *   Returns:
+ *   bool true      :           Frame is directed to this Service
+ *        false     :           Frame is not directed to this Service
+ *
+ */
 bool SoftwareUpdateService::process(PQ9Frame &command, PQ9Bus &interface, PQ9Frame &workingBuffer)
 {
 

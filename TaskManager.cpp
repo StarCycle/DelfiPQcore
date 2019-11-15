@@ -7,9 +7,31 @@
 
 #include <TaskManager.h>
 
+/**
+ *
+ *   Contruct Task Manager
+ *
+ *   Parameters:
+ *   Task **tasksArray  Array of Task objects
+ *   int count          Amount of Tasks
+ *
+ *   Returns:
+ *
+ *
+ */
 TaskManager::TaskManager(Task **tasksArray, int count) :
         tasks(tasksArray), tasksCount(count) {}
 
+/**
+ *
+ *   Start Task Execution
+ *
+ *   Parameters:
+ *
+ *   Returns:
+ *
+ *
+ */
 void TaskManager::start()
 {
     while(true)

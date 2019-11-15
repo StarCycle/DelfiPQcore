@@ -9,6 +9,16 @@
 
 extern DSerial serial;
 
+
+/**
+ *
+ *   Reset device, triggered by WatchDog interrupt (time-out)
+ *
+ *   Parameters:
+
+ *   Returns:
+ *
+ */
 void resetHandler()
 {
     serial.println("ResetService: internal watch-dog reset...");
@@ -17,9 +27,29 @@ void resetHandler()
     MAP_SysCtl_rebootDevice();
 }
 
+/**
+ *
+ *   ResetService Constructor
+ *
+ *   Parameters:
+ *   WDport                     Port of external WatchDog
+ *   WDpin                      Pin of external WatchDog
+ *
+ *   Returns:
+ *
+ */
 ResetService::ResetService(const unsigned long WDport, const unsigned long WDpin) :
         WDIPort(WDport), WDIPin(WDpin) {}
 
+/**
+ *
+ *   ResetService Initialize watchdog service and interrupts.
+ *
+ *   Parameters:
+
+ *   Returns:
+ *
+ */
 void ResetService::init()
 {
     // initialize the internal watch-dog
@@ -34,6 +64,15 @@ void ResetService::init()
     MAP_WDT_A_startTimer();
 }
 
+/**
+ *
+ *   Reset internal watchdog interrupt and timer and set External watchdog port/pins as output.
+ *
+ *   Parameters:
+
+ *   Returns:
+ *
+ */
 void ResetService::refreshConfiguration()
 {
     // select the interrupt handler
@@ -50,12 +89,31 @@ void ResetService::refreshConfiguration()
     MAP_GPIO_setAsOutputPin( WDIPort, WDIPin );
 }
 
+/**
+ *
+ *   kick internal watchdog by resetting timer, should be called every (3min) or reset.
+ *
+ *   Parameters:
+ *
+ *   Returns:
+ *
+ */
 void ResetService::kickInternalWatchDog()
 {
     // reset the internal watch-dog timer
     MAP_WDT_A_clearTimer();
 }
 
+
+/**
+ *
+ *   kick external watchdog by resetting timer.
+ *
+ *   Parameters:
+ *
+ *   Returns:
+ *
+ */
 void ResetService::kickExternalWatchDog()
 {
     // toggle the WDI pin of the external watch-dog
@@ -63,6 +121,20 @@ void ResetService::kickExternalWatchDog()
     MAP_GPIO_setOutputLowOnPin( WDIPort, WDIPin );
 }
 
+/**
+ *
+ *   Process the Service (Called by CommandHandler)
+ *
+ *   Parameters:
+ *   PQ9Frame &command          Frame received over the bus
+ *   PQ9Bus &interface          Bus object
+ *   PQ9Frame &workingBuffer    Reference to buffer to store the response.
+ *
+ *   Returns:
+ *   bool true      :           Frame is directed to this Service
+ *        false     :           Frame is not directed to this Service
+ *
+ */
 bool ResetService::process(PQ9Frame &command, PQ9Bus &interface, PQ9Frame &workingBuffer)
 {
     if (command.getPayload()[0] == RESET_SERVICE)

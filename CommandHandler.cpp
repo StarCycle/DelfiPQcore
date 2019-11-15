@@ -15,6 +15,16 @@ extern DSerial serial;
 
 PQ9CommandHandler *instance;
 
+/**
+ *
+ *   Handle the Commands (Task function of Commandhandler object)
+ *
+ *   Parameters:
+ *
+ *
+ *   Returns:
+ *
+ */
 void stubCommandHandler()
 {
     if (instance->handleCommands())
@@ -26,7 +36,18 @@ void stubCommandHandler()
         //}
     }
 }
-
+/**
+ *
+ *   CommandHandler Constructor
+ *
+ *   Parameters:
+ *   PQ9Bus &interface          Physical Bus object
+ *   Service **servArray        Array of services (commands) to handle
+ *   int count                  Amount of services in Array
+ *
+ *   Returns:
+ *
+ */
 PQ9CommandHandler::PQ9CommandHandler(PQ9Bus &interface, Service **servArray, int count) :
           Task(stubCommandHandler), bus(interface), services(servArray), servicesCount(count)
 {
@@ -34,17 +55,49 @@ PQ9CommandHandler::PQ9CommandHandler(PQ9Bus &interface, Service **servArray, int
     onValidCmd = 0;
 }
 
+/**
+ *
+ *   Receive Commands from Bus (Should be hooked to bus .SetReceiveHandler())
+ *      and Set Task Execution Flag
+ *
+ *   Parameters:
+ *   PQ9Frame &newFrame         Received Frame from bus
+ *
+ *   Returns:
+ *
+ */
 void PQ9CommandHandler::received( PQ9Frame &newFrame )
 {
     newFrame.copy(rxBuffer);
     notify();
 }
 
+/**
+ *
+ *   Called when a Valid Command was received over Bus and executed
+ *
+ *   Parameters:
+ *   void (*function)         Function invoked upon receival and execution of valid Command
+ *
+ *   Returns:
+ *
+ */
 void PQ9CommandHandler::onValidCommand(void (*function)( void ))
 {
     onValidCmd = function;
 }
 
+/**
+ *
+ *   Handle received commands (called by StubCommandHandler)
+ *
+ *   Parameters:
+ *
+ *   Returns:
+ *   True: Command was Handled
+ *   False: Command was not Handled
+ *
+ */
 bool PQ9CommandHandler::handleCommands()
 {
     if (rxBuffer.getPayloadSize() > 1)
@@ -53,7 +106,7 @@ bool PQ9CommandHandler::handleCommands()
 
         for (int i = 0; i < servicesCount; i++)
         {
-            if (services[i]->process(rxBuffer, bus, txBuffer))
+            if (services[i]->process(rxBuffer, bus, txBuffer)) // Does any of the Services Handle this command?
             {
                 // stop the loop if a service is found
                 found = true;
