@@ -9,21 +9,6 @@
 
 /**
  *
- *   Contruct Task Manager
- *
- *   Parameters:
- *   Task **tasksArray  Array of Task objects
- *   int count          Amount of Tasks
- *
- *   Returns:
- *
- *
- */
-TaskManager::TaskManager(Task **tasksArray, int count) :
-        tasks(tasksArray), tasksCount(count) {}
-
-/**
- *
  *   Start Task Execution
  *
  *   Parameters:
@@ -32,15 +17,23 @@ TaskManager::TaskManager(Task **tasksArray, int count) :
  *
  *
  */
-void TaskManager::start()
+void TaskManager::start( Task **tasks, int count )
 {
+    // run the initialization code first
+    for (int i = 0; i < count; i++)
+    {
+        tasks[i]->setUp();
+    }
+
+    // run the tasks in a sequence
     while(true)
     {
-        for (int i = 0; i < tasksCount; i++)
+        for (int i = 0; i < count; i++)
         {
             tasks[i]->executeTask();
         }
-
+        // low-power mode currently disabled
+        // TODO: RS485 frames lost sometimes when low-power mode enables
         //MAP_PCM_gotoLPM0();
     }
 }

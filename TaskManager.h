@@ -13,13 +13,9 @@
 class TaskManager
 {
 protected:
-    Task** tasks;
-    const int tasksCount;
 
 public:
-    TaskManager( Task **tasksArray, int count );
-    virtual ~TaskManager();
-    void start( void );
+    static void start( Task **tasksArray, int count );
 };
 
 #endif /* TASKMANAGER_H_ */

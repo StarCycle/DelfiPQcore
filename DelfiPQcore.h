@@ -18,7 +18,6 @@ class DelfiPQcore
 {
 public:
     static void initMCU();
-    static void startTaskManager( Task **tasks, int tasksCount);
 };
 
 #endif /* DELFIPQCORE_H_ */
