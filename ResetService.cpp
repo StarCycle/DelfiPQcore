@@ -24,7 +24,7 @@ void resetHandler()
     serial.println("ResetService: internal watch-dog reset...");
     // TODO: replace this with a power cycle to protect also the RS485 driver
     // for now, at least reset, till the power cycle gets implemented in HW
-    forceSoftReset();
+    MAP_SysCtl_rebootDevice();
 }
 
 /**
