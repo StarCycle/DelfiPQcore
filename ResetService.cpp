@@ -24,7 +24,7 @@ void resetHandler()
     serial.println("ResetService: internal watch-dog reset...");
     // TODO: replace this with a power cycle to protect also the RS485 driver
     // for now, at least reset, till the power cycle gets implemented in HW
-    MAP_SysCtl_rebootDevice();
+    forceSoftReset();
 }
 
 /**
@@ -32,8 +32,8 @@ void resetHandler()
  *   ResetService Constructor
  *
  *   Parameters:
- *   WDport                     Port of external WatchDog
- *   WDpin                      Pin of external WatchDog
+ *   WDport                     External watch-dog reset port
+ *   WDpin                      External watch-dog reset pin
  *
  *   Returns:
  *
@@ -43,7 +43,7 @@ ResetService::ResetService(const unsigned long WDport, const unsigned long WDpin
 
 /**
  *
- *   ResetService Initialize watchdog service and interrupts.
+ *   ResetService Initialize watch-dog service and interrupts.
  *
  *   Parameters:
 
@@ -60,13 +60,17 @@ void ResetService::init()
     // select the interrupt handler
     MAP_WDT_A_registerInterrupt(&resetHandler);
 
+    // initialize external watch-dog pins
+    MAP_GPIO_setOutputLowOnPin( WDIPort, WDIPin );
+    MAP_GPIO_setAsOutputPin( WDIPort, WDIPin );
+
     // start the timer
     MAP_WDT_A_startTimer();
 }
 
 /**
  *
- *   Reset internal watchdog interrupt and timer and set External watchdog port/pins as output.
+ *   Reset internal watch-dog interrupt and timer and set external watch-dog port/pins as output.
  *
  *   Parameters:
 
@@ -91,7 +95,7 @@ void ResetService::refreshConfiguration()
 
 /**
  *
- *   kick internal watchdog by resetting timer, should be called every (3min) or reset.
+ *   Kick internal watchdog by resetting timer, should be called every (3min) or reset.
  *
  *   Parameters:
  *
@@ -104,10 +108,9 @@ void ResetService::kickInternalWatchDog()
     MAP_WDT_A_clearTimer();
 }
 
-
 /**
  *
- *   kick external watchdog by resetting timer.
+ *   Kick external watch-dog by resetting timer.
  *
  *   Parameters:
  *
@@ -158,7 +161,7 @@ bool ResetService::process(PQ9Frame &command, PQ9Bus &interface, PQ9Frame &worki
                     interface.transmit(workingBuffer);
 
                     // now reset the MCU
-                    MAP_SysCtl_rebootDevice();
+                    forceSoftReset();
                     break;
 
                 case RESET_HARD:
@@ -167,14 +170,8 @@ bool ResetService::process(PQ9Frame &command, PQ9Bus &interface, PQ9Frame &worki
                     // a response is sent before reset but not 2
                     interface.transmit(workingBuffer);
 
-                    // toggle the WDI pin 3 times, just to be sure
-                    // the external watch-dog resets...
-                    MAP_GPIO_setOutputHighOnPin( WDIPort, WDIPin );
-                    MAP_GPIO_setOutputLowOnPin( WDIPort, WDIPin );
-                    MAP_GPIO_setOutputHighOnPin( WDIPort, WDIPin );
-                    MAP_GPIO_setOutputLowOnPin( WDIPort, WDIPin );
-                    MAP_GPIO_setOutputHighOnPin( WDIPort, WDIPin );
-                    MAP_GPIO_setOutputLowOnPin( WDIPort, WDIPin );
+                    // now force the external watch-dog to reset the MCU
+                    forceHardReset();
                     break;
 
                     // not implemented yet, give error to notify it
@@ -212,4 +209,39 @@ bool ResetService::process(PQ9Frame &command, PQ9Bus &interface, PQ9Frame &worki
         // report the command was not processed
         return false;
     }
+}
+
+/**
+ *
+ *   Force the external watch-dog to reset the MCU
+ *
+ *   Parameters:
+ *
+ *   Returns:
+ *
+ */
+void ResetService::forceHardReset()
+{
+    // toggle the WDI pin 3 times, just to be sure
+    // the external watch-dog resets...
+    MAP_GPIO_setOutputHighOnPin( WDIPort, WDIPin );
+    MAP_GPIO_setOutputLowOnPin( WDIPort, WDIPin );
+    MAP_GPIO_setOutputHighOnPin( WDIPort, WDIPin );
+    MAP_GPIO_setOutputLowOnPin( WDIPort, WDIPin );
+    MAP_GPIO_setOutputHighOnPin( WDIPort, WDIPin );
+    MAP_GPIO_setOutputLowOnPin( WDIPort, WDIPin );
+}
+
+/**
+ *
+ *   Force the internal watch-dog to reset the MCU
+ *
+ *   Parameters:
+ *
+ *   Returns:
+ *
+ */
+void ResetService::forceSoftReset()
+{
+    MAP_SysCtl_rebootDevice();
 }

@@ -35,6 +35,8 @@ class ResetService: public Service
      void kickExternalWatchDog();
      void kickInternalWatchDog();
 
+     void forceHardReset();
+     void forceSoftReset();
 };
 
 #endif /* RESETSERVICE_H_ */
