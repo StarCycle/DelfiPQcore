@@ -22,8 +22,7 @@ class PQ9CommandHandler: public Task
      int servicesCount;
      PQ9Frame rxBuffer, txBuffer;
      void (*onValidCmd)( void );
-     friend void stubCommandHandler( );
-     bool handleCommands();
+     virtual void run();
 
  public:
      PQ9CommandHandler( PQ9Bus &bus, Service **servArray, int count );

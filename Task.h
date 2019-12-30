@@ -15,7 +15,10 @@ class Task
     void (*userFunction)( void );
     void (*initializer)( void );
 
+    virtual void run();
+
  public:
+    Task(  );
     Task( void (*function)( void ) );
     Task( void (*function)( void ), void (*init)( void ) );
     virtual ~Task( ) {};

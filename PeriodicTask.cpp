@@ -35,9 +35,9 @@ void timerHandler(void)
  *   Construct PeriodicTask (extends Task)
  *
  *   Parameters:
- *      const unsigned int count        Count value set in the counter (Initial value to countdown from)
+ *      const unsigned int count        Count value set in the counter (Initial value to count down from)
  *      void (*function)                The function to Execute
- *      void (*init)                    The Initialiser of the Function
+ *      void (*init)                    The Initializer of the Function
  *   Returns:
  *
  *
@@ -60,7 +60,7 @@ PeriodicTask::PeriodicTask(const unsigned int count, void (*function)( void ), v
  *
  *   Parameters:
  *      void (*function)                The function to Execute
- *      void (*init)                    The Initialiser of the Function
+ *      void (*init)                    The Initializer of the Function
  *   Returns:
  *
  *

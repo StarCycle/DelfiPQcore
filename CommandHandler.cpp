@@ -13,29 +13,6 @@
 
 extern DSerial serial;
 
-PQ9CommandHandler *instance;
-
-/**
- *
- *   Handle the Commands (Task function of Commandhandler object)
- *
- *   Parameters:
- *
- *
- *   Returns:
- *
- */
-void stubCommandHandler()
-{
-    if (instance->handleCommands())
-    {
-        // command executed correctly
-        //if (instance->onValidCmd)
-        //{
-        //    instance->onValidCmd();
-        //}
-    }
-}
 /**
  *
  *   CommandHandler Constructor
@@ -49,9 +26,8 @@ void stubCommandHandler()
  *
  */
 PQ9CommandHandler::PQ9CommandHandler(PQ9Bus &interface, Service **servArray, int count) :
-          Task(stubCommandHandler), bus(interface), services(servArray), servicesCount(count)
+          Task(), bus(interface), services(servArray), servicesCount(count)
 {
-    instance = this;
     onValidCmd = 0;
 }
 
@@ -89,7 +65,7 @@ void PQ9CommandHandler::onValidCommand(void (*function)( void ))
 
 /**
  *
- *   Handle received commands (called by StubCommandHandler)
+ *   Handle received commands (called by CommandHandler)
  *
  *   Parameters:
  *
@@ -98,7 +74,7 @@ void PQ9CommandHandler::onValidCommand(void (*function)( void ))
  *   False: Command was not Handled
  *
  */
-bool PQ9CommandHandler::handleCommands()
+void PQ9CommandHandler::run()
 {
     if (rxBuffer.getPayloadSize() > 1)
     {
@@ -125,7 +101,7 @@ bool PQ9CommandHandler::handleCommands()
             txBuffer.getPayload()[0] = 0;
             txBuffer.getPayload()[1] = 0;
             bus.transmit(txBuffer);
-            return false;
+            return;
         }
         else
         {
@@ -133,7 +109,7 @@ bool PQ9CommandHandler::handleCommands()
             {
                 onValidCmd();
             }
-            return true;
+            return;
         }
     }
     else
@@ -147,6 +123,6 @@ bool PQ9CommandHandler::handleCommands()
         txBuffer.getPayload()[0] = 0;
         txBuffer.getPayload()[1] = 0;
         bus.transmit(txBuffer);
-        return false;
+        return;
     }
 }

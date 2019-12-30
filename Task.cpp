@@ -34,6 +34,8 @@ Task::Task( void (*function)( void ), void (*init)( void ) ) :
 Task::Task( void (*function)( void )) :
             userFunction(function), initializer([]{ }) {}
 
+Task::Task( ) : userFunction(0), initializer(0) {}
+
 /**
  *
  *   Set flag that Task is ready for execution:
@@ -76,17 +78,22 @@ void Task::executeTask()
 {
     if (execute)
     {
-        if (userFunction)
-        {
-            userFunction();
-        }
+        run();
         execute = false;
+    }
+}
+
+void Task::run()
+{
+    if (userFunction)
+    {
+        userFunction();
     }
 }
 
 /**
  *
- *   Initialise Task using initialiser function (passed in contructor)
+ *   Initialize Task using initializer function (passed in constructor)
  *
  *   Parameters:
  *
@@ -95,5 +102,8 @@ void Task::executeTask()
  */
 void Task::setUp()
 {
-    initializer();
+    if (initializer)
+    {
+        initializer();
+    }
 }
