@@ -76,7 +76,7 @@ bool Task::notified()
  */
 void Task::executeTask()
 {
-    if (execute)
+    if (notified())
     {
         run();
         execute = false;

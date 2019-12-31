@@ -24,7 +24,7 @@ class Task
     virtual ~Task( ) {};
     virtual void notify( void );
     virtual bool notified();
-    virtual void executeTask();
+    void executeTask();
     virtual void setUp();
 };
 
