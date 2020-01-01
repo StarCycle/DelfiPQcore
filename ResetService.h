@@ -8,7 +8,6 @@
 #ifndef RESETSERVICE_H_
 #define RESETSERVICE_H_
 
-#include "PQ9Frame.h"
 #include "Service.h"
 #include "DSerial.h"
 
@@ -29,7 +28,7 @@ class ResetService: public Service
 
  public:
      ResetService( const unsigned long port, const unsigned long pin );
-     virtual bool process( PQ9Frame &command, PQ9Bus &interface, PQ9Frame &workingBbuffer );
+     virtual bool process( PQ9Frame &command, PQ9Sender &interface, PQ9Frame &workingBbuffer );
      void init();
      void refreshConfiguration();
      void kickExternalWatchDog();

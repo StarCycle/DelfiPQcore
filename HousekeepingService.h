@@ -9,7 +9,6 @@
 #define HOUSEKEEPINGSERVICE_H_
 
 #include <type_traits>
-#include "PQ9Frame.h"
 #include "Service.h"
 #include "TelemetryContainer.h"
 #include "DSerial.h"
@@ -45,7 +44,7 @@ protected:
     T telemetryContainer[2];
 
  public:
-    bool process( PQ9Frame &command, PQ9Bus &interface, PQ9Frame &workingBuffer )
+    bool process( PQ9Frame &command, PQ9Sender &interface, PQ9Frame &workingBuffer )
     {
         if (command.getPayload()[0] == HOUSEKEEPING_SERVICE)
         {

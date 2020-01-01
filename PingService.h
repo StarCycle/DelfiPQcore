@@ -8,8 +8,6 @@
 #ifndef PINGSERVICE_H_
 #define PINGSERVICE_H_
 
-#include "PQ9Bus.h"
-#include "PQ9Frame.h"
 #include "Service.h"
 #include "DSerial.h"
 
@@ -21,7 +19,7 @@
 class PingService: public Service
 {
  public:
-     virtual bool process( PQ9Frame &command, PQ9Bus &interface, PQ9Frame &workingBbuffer );
+     virtual bool process( PQ9Frame &command, PQ9Sender &interface, PQ9Frame &workingBbuffer );
 };
 
 #endif /* PINGSERVICE_H_ */

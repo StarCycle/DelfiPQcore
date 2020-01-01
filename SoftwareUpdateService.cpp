@@ -15,7 +15,7 @@ extern DSerial serial;
  *
  *   Parameters:
  *   PQ9Frame &command          Frame received over the bus
- *   PQ9Bus &interface          Bus object
+ *   PQ9Sender &interface       Bus object
  *   PQ9Frame &workingBuffer    Reference to buffer to store the response.
  *
  *   Returns:
@@ -23,7 +23,7 @@ extern DSerial serial;
  *        false     :           Frame is not directed to this Service
  *
  */
-bool SoftwareUpdateService::process(PQ9Frame &command, PQ9Bus &interface, PQ9Frame &workingBuffer)
+bool SoftwareUpdateService::process(PQ9Frame &command, PQ9Sender &interface, PQ9Frame &workingBuffer)
 {
 
     if (command.getPayload()[0] == SOFTWAREUPDATE_SERVICE)

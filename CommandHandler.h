@@ -8,7 +8,6 @@
 #ifndef COMMANDHANDLER_H_
 #define COMMANDHANDLER_H_
 
-#include "PQ9Frame.h"
 #include "Service.h"
 #include "Task.h"
 #include "PingService.h"
@@ -17,7 +16,7 @@
 class PQ9CommandHandler: public Task
 {
  protected:
-     PQ9Bus &bus;
+     PQ9Sender &bus;
      Service** services;
      int servicesCount;
      PQ9Frame rxBuffer, txBuffer;
@@ -25,7 +24,7 @@ class PQ9CommandHandler: public Task
      virtual void run();
 
  public:
-     PQ9CommandHandler( PQ9Bus &bus, Service **servArray, int count );
+     PQ9CommandHandler( PQ9Sender &bus, Service **servArray, int count );
      void received( PQ9Frame &newFrame );
      void onValidCommand(void (*function)( void ));
 };

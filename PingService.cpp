@@ -22,7 +22,7 @@ extern DSerial serial;
  *        false     :           Frame is not directed to this Service
  *
  */
-bool PingService::process(PQ9Frame &command, PQ9Bus &interface, PQ9Frame &workingBuffer)
+bool PingService::process(PQ9Frame &command, PQ9Sender &interface, PQ9Frame &workingBuffer)
 {
     if (command.getPayload()[0] == PING_SERVICE) //Check if this frame is directed to this service
     {

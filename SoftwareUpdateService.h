@@ -8,7 +8,6 @@
 #ifndef SOFTWAREUPDATESERVICE_H_
 #define SOFTWAREUPDATESERVICE_H_
 
-#include "PQ9Frame.h"
 #include "Service.h"
 #include "DSerial.h"
 
@@ -17,7 +16,7 @@
 class SoftwareUpdateService: public Service
 {
  public:
-     virtual bool process( PQ9Frame &command, PQ9Bus &interface, PQ9Frame &workingBbuffer );
+     virtual bool process( PQ9Frame &command, PQ9Sender &interface, PQ9Frame &workingBbuffer );
 
 };
 
