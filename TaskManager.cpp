@@ -32,8 +32,8 @@ void TaskManager::start( Task **tasks, int count )
         {
             tasks[i]->executeTask();
         }
-        // low-power mode currently disabled
-        // TODO: RS485 frames lost sometimes when low-power mode enables
-        //MAP_PCM_gotoLPM0();
+        // TODO: what if a task weaks up another task?
+        // go into low-power mode
+        MAP_PCM_gotoLPM0();
     }
 }

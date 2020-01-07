@@ -9,21 +9,21 @@
 
 /**
  *
- *   Task Constructor:
+ *   Task Constructor: take an external function and initializer
  *
  *   Parameters:
  *   void (*function)           Function called by Task
- *   void (*init)               Function to initialise Task
+ *   void (*init)               Function to initialize Task
  *
  *   Returns:
  *
  */
 Task::Task( void (*function)( void ), void (*init)( void ) ) :
-            userFunction(function), initializer(init) {}
+            userFunction( function ), initializer( init ) {}
 
 /**
  *
- *   Task Constructor:
+ *   Task Constructor: take an external function
  *
  *   Parameters:
  *   void (*function)           Function called by Task (no initializer)
@@ -32,13 +32,23 @@ Task::Task( void (*function)( void ), void (*init)( void ) ) :
  *
  */
 Task::Task( void (*function)( void )) :
-            userFunction(function), initializer([]{ }) {}
-
-Task::Task( ) : userFunction(0), initializer(0) {}
+            userFunction( function ), initializer( 0 ) {}
 
 /**
  *
- *   Set flag that Task is ready for execution:
+ *   Task Constructor: the task function and the initializer
+ *   should be inherited from Task.h
+ *
+ *   Parameters:
+ *
+ *   Returns:
+ *
+ */
+Task::Task( void ) : userFunction( 0 ), initializer( 0 ) {}
+
+/**
+ *
+ *   Weak up the task
  *
  *   Parameters:
  *
@@ -48,19 +58,22 @@ Task::Task( ) : userFunction(0), initializer(0) {}
 void Task::notify( void )
 {
     execute = true;
+
+    // make sure the task manager is awaken
+    MAP_Interrupt_disableSleepOnIsrExit();
 }
 
 /**
  *
- *   Get flag that Task is ready for execution:
+ *   Return if the Task should weak up
  *
  *   Parameters:
  *
  *   Returns:
- *    bool execute      :       True: Task is ready for Execution
+ *   bool execute               True: Task is ready for Execution
  *                              False: Task is not ready for Execution
  */
-bool Task::notified()
+bool Task::notified( void )
 {
     return execute;
 }
@@ -74,7 +87,7 @@ bool Task::notified()
  *   Returns:
  *
  */
-void Task::executeTask()
+void Task::executeTask( void )
 {
     if (notified())
     {
@@ -83,7 +96,16 @@ void Task::executeTask()
     }
 }
 
-void Task::run()
+/**
+ *
+ *   Task function (passed in constructor or overridden)
+ *
+ *   Parameters:
+ *
+ *   Returns:
+ *
+ */
+void Task::run( void )
 {
     if (userFunction)
     {
@@ -93,14 +115,14 @@ void Task::run()
 
 /**
  *
- *   Initialize Task using initializer function (passed in constructor)
+ *   Initialize Task using initializer function (passed in constructor or overridden)
  *
  *   Parameters:
  *
  *   Returns:
  *
  */
-void Task::setUp()
+void Task::setUp( void )
 {
     if (initializer)
     {
