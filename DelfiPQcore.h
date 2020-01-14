@@ -10,14 +10,15 @@
 
 #include <driverlib.h>
 #include "msp.h"
-#include "Task.h"
 
 #define FCLOCK 48000000
 
 class DelfiPQcore
 {
 public:
-    static void initMCU();
+    static void initMCU( void );
+    static bool getHFOscillatorStatus( void );
+    static bool getLFOscillatorStatus( void );
 };
 
 #endif /* DELFIPQCORE_H_ */
