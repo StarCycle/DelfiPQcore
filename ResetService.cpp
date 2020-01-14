@@ -101,7 +101,7 @@ void ResetService::refreshConfiguration()
 
 /**
  *
- *   Kick internal watchdog by resetting timer, should be called every (3min) or reset.
+ *   Kick internal watch-dog by resetting timer, should be called every (3min) or reset.
  *
  *   Parameters:
  *
@@ -156,7 +156,6 @@ bool ResetService::process(PQ9Frame &command, DataBus &interface, PQ9Frame &work
 
         if ((command.getPayloadSize() == 3) && (command.getPayload()[1] == RESET_REQUEST))
         {
-            serial.println("ResetService: Reset");
             workingBuffer.getPayload()[2] = command.getPayload()[2];
             switch(command.getPayload()[2])
             {
@@ -228,6 +227,13 @@ bool ResetService::process(PQ9Frame &command, DataBus &interface, PQ9Frame &work
  */
 void ResetService::forceHardReset()
 {
+    serial.println("ResetService: Hard reset");
+    // TODO: flush the serial port to make sure all characters have been trinted out before resetting
+    uint32_t d = MAP_CS_getMCLK() * 4 / 9600;
+    for(uint32_t k = 0; k < d;  k++)
+    {
+        __asm("  nop");
+    }
     // toggle the WDI pin 3 times, just to be sure
     // the external watch-dog resets...
     MAP_GPIO_setOutputHighOnPin( WDIPort, WDIPin );
@@ -249,5 +255,12 @@ void ResetService::forceHardReset()
  */
 void ResetService::forceSoftReset()
 {
+    serial.println("ResetService: Soft reset");
+    // TODO: flush the serial port to make sure all characters have been trinted out before resetting
+    uint32_t d = MAP_CS_getMCLK() * 4 / 9600;
+    for(uint32_t k = 0; k < d;  k++)
+    {
+        __asm("  nop");
+    }
     MAP_SysCtl_rebootDevice();
 }
