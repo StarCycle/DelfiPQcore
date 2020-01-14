@@ -147,8 +147,7 @@ class SoftwareUpdateService: public Service
 
      void erase_slot(unsigned char param);
 
-     unsigned char* throw_error(unsigned char* data, unsigned char error);
-     void set_error(unsigned char error);
+     void throw_error(unsigned char error);
 
      unsigned char state_flags = 0;
      unsigned char update_slot;
