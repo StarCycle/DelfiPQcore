@@ -130,7 +130,7 @@ void ResetService::kickExternalWatchDog()
  *
  *   Parameters:
  *   PQ9Frame &command          Frame received over the bus
- *   PQ9Sender &interface       Bus object
+ *   DataBus &interface       Bus object
  *   PQ9Frame &workingBuffer    Reference to buffer to store the response.
  *
  *   Returns:
@@ -138,7 +138,7 @@ void ResetService::kickExternalWatchDog()
  *        false     :           Frame is not directed to this Service
  *
  */
-bool ResetService::process(PQ9Frame &command, PQ9Sender &interface, PQ9Frame &workingBuffer)
+bool ResetService::process(PQ9Frame &command, DataBus &interface, PQ9Frame &workingBuffer)
 {
     if (command.getPayload()[0] == RESET_SERVICE)
     {

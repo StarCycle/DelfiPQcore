@@ -19,7 +19,7 @@
 class PingService: public Service
 {
  public:
-     virtual bool process( PQ9Frame &command, PQ9Sender &interface, PQ9Frame &workingBbuffer );
+     virtual bool process( PQ9Frame &command, DataBus &interface, PQ9Frame &workingBbuffer );
 };
 
 #endif /* PINGSERVICE_H_ */

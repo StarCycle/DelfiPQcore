@@ -8,7 +8,7 @@
 #ifndef SERVICE_H_
 #define SERVICE_H_
 
-#include "PQ9Sender.h"
+#include "DataBus.h"
 #include "PQ9Frame.h"
 
 class Service
@@ -18,7 +18,7 @@ class Service
  public:
 
     virtual ~Service( ) {};
-    virtual bool process(PQ9Frame &command, PQ9Sender &interface, PQ9Frame &workingBbuffer) = 0;
+    virtual bool process(PQ9Frame &command, DataBus &interface, PQ9Frame &workingBbuffer) = 0;
 };
 
 #endif /* SERVICE_H_ */

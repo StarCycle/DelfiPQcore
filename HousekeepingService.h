@@ -44,7 +44,7 @@ protected:
     T telemetryContainer[2];
 
  public:
-    bool process( PQ9Frame &command, PQ9Sender &interface, PQ9Frame &workingBuffer )
+    bool process( PQ9Frame &command, DataBus &interface, PQ9Frame &workingBuffer )
     {
         if (command.getPayload()[0] == HOUSEKEEPING_SERVICE)
         {

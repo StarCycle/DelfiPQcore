@@ -16,7 +16,7 @@
 class PQ9CommandHandler: public Task
 {
  protected:
-     PQ9Sender &bus;
+     DataBus &bus;
      Service** services;
      int servicesCount;
      PQ9Frame rxBuffer, txBuffer;
@@ -24,7 +24,7 @@ class PQ9CommandHandler: public Task
      virtual void run();
 
  public:
-     PQ9CommandHandler( PQ9Sender &bus, Service **servArray, int count );
+     PQ9CommandHandler( DataBus &bus, Service **servArray, int count );
      void received( PQ9Frame &newFrame );
      void onValidCommand(void (*function)( void ));
 };
