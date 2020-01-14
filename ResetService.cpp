@@ -22,6 +22,12 @@ extern DSerial serial;
 void resetHandler()
 {
     serial.println("ResetService: internal watch-dog reset...");
+    // TODO: flush the serial port to make sure all characters have been trinted out before resetting
+    uint32_t d = MAP_CS_getMCLK() * 4 / 9600;
+    for(uint32_t k = 0; k < d;  k++)
+    {
+        __asm("  nop");
+    }
     // TODO: replace this with a power cycle to protect also the RS485 driver
     // for now, at least reset, till the power cycle gets implemented in HW
     MAP_SysCtl_rebootDevice();
