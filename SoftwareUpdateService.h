@@ -10,6 +10,11 @@
 
 #include "Service.h"
 #include "DSerial.h"
+#include "MB85RS.h"
+
+extern "C" {
+    #include "md5.h"
+}
 
 #define SOFTWAREUPDATE_SERVICE  18
 
@@ -128,6 +133,7 @@ static const uint8_t CRC_TABLE[256] = { //CRC8-CCITT table, polynomial x^8+x^2+x
 class SoftwareUpdateService: public Service
 {
  public:
+     SoftwareUpdateService(MB85RS &fram_in);
      virtual bool process( DataFrame &command, DataBus &interface, DataFrame &workingBuffer );
  private:
      void start_OTA(unsigned char slot_number);
@@ -156,6 +162,8 @@ class SoftwareUpdateService: public Service
 
      unsigned char* payload_data;
      unsigned char payload_size;
+
+     MB85RS* fram;
 };
 
 #endif /* SOFTWAREUPDATESERVICE_H_ */

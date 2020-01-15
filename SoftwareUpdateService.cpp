@@ -7,10 +7,6 @@
 
 #include "SoftwareUpdateService.h"
 
-extern "C" {
-    #include "md5.h"
-}
-
 extern DSerial serial;
 
 /**
@@ -27,9 +23,12 @@ extern DSerial serial;
  *        false     :           Frame is not directed to this Service
  *
  */
-bool SoftwareUpdateService::process(DataFrame &command, DataBus &interface, DataFrame &workingBuffer)
-{
 
+SoftwareUpdateService::SoftwareUpdateService(MB85RS &fram_in) {
+    fram = &fram_in;
+}
+
+bool SoftwareUpdateService::process(DataFrame &command, DataBus &interface, DataFrame &workingBuffer) {
     if (command.getPayload()[COMMAND_SERVICE] == SOFTWAREUPDATE_SERVICE) {
         // prepare response frame
         workingBuffer.setDestination(command.getSource());
@@ -45,9 +44,9 @@ bool SoftwareUpdateService::process(DataFrame &command, DataBus &interface, Data
         case START_OTA:
             if(command.getPayloadSize() == PAYLOAD_SIZE_OFFSET + 1) {
                 if(command.getPayload()[COMMAND_DATA] == 1 || command.getPayload()[COMMAND_DATA] == 2) {
-                    start_OTA(command.getPayload()[COMMAND_DATA] - 1);
-                    if(payload_data[COMMAND_RESPONSE] == COMMAND_ERROR) throw_error(payload_data[COMMAND_DATA]);
-
+//                    start_OTA(command.getPayload()[COMMAND_DATA] - 1);
+//                    if(payload_data[COMMAND_RESPONSE] == COMMAND_ERROR) throw_error(payload_data[COMMAND_DATA]);
+                    serial.print("OTA started!");
                 } else throw_error(SLOT_OUT_OF_RANGE);
             } else throw_error(PARAMETER_MISMATCH);
             break;
@@ -128,19 +127,19 @@ bool SoftwareUpdateService::process(DataFrame &command, DataBus &interface, Data
 }
 
 void SoftwareUpdateService::start_OTA(unsigned char slot_number) {
-    unsigned char error;
+    //unsigned char error;
     payload_size = PAYLOAD_SIZE_OFFSET;
 
     if((state_flags & UPDATE_FLAG) == 0) {
         unsigned char state;
-        if((error = fram_read_bytes((METADATA_SIZE + PAR_CRC_SIZE) * slot_number, &state, 1)) != NO_ERROR) return throw_error(error);
+        fram->read((METADATA_SIZE + PAR_CRC_SIZE) * slot_number, &state, 1);
 
         if(state == EMPTY) {
             state_flags |= UPDATE_FLAG;
             state_flags &= ~METADATA_FLAG;
             update_slot = slot_number;
             state = PARTIAL;
-            if((error = fram_write_bytes((METADATA_SIZE + PAR_CRC_SIZE) * slot_number, &state, 1)) != NO_ERROR) return throw_error(error);
+            fram->write((METADATA_SIZE + PAR_CRC_SIZE) * slot_number, &state, 1);
 //            missed_blocks.arr = nullptr;
 //            missed_blocks.arr_size = 0;
 //            missed_blocks.num = 0;
@@ -150,12 +149,12 @@ void SoftwareUpdateService::start_OTA(unsigned char slot_number) {
 }
 
 void SoftwareUpdateService::receive_metadata(unsigned char* metadata) {
-    unsigned char error;
+    //unsigned char error;
     payload_size = PAYLOAD_SIZE_OFFSET;
 
     if((state_flags & UPDATE_FLAG) > 0) {
         if((state_flags & METADATA_FLAG) == 0) {
-            if((error = fram_write_bytes((METADATA_SIZE + PAR_CRC_SIZE) * update_slot + 1, metadata, METADATA_SIZE - 1)) != NO_ERROR) return throw_error(error);
+            fram->write((METADATA_SIZE + PAR_CRC_SIZE) * update_slot + 1, metadata, METADATA_SIZE - 1);
             num_update_blocks = metadata[NUM_BLOCKS_OFFSET - 1] | (metadata[NUM_BLOCKS_OFFSET] << 8);
             state_flags |= METADATA_FLAG;
         } else return throw_error(METADATA_ALREADY_RECEIVED);
@@ -163,21 +162,21 @@ void SoftwareUpdateService::receive_metadata(unsigned char* metadata) {
 }
 
 void SoftwareUpdateService::send_metadata(unsigned char slot_number) {
-    unsigned char error;
+    //unsigned char error;
     payload_size = PAYLOAD_SIZE_OFFSET + METADATA_SIZE ;
 
-    if((error = fram_read_bytes((METADATA_SIZE + PAR_CRC_SIZE) * slot_number, &payload_data[COMMAND_DATA], METADATA_SIZE)) != NO_ERROR) return throw_error(error);
+    fram->read((METADATA_SIZE + PAR_CRC_SIZE) * slot_number, &payload_data[COMMAND_DATA], METADATA_SIZE);
 }
 
 void SoftwareUpdateService::receive_partial_crcs(unsigned char* crc_block, unsigned char num_bytes) {
-    unsigned char error;
+    //unsigned char error;
     payload_size = PAYLOAD_SIZE_OFFSET;
 
     if((state_flags & UPDATE_FLAG) > 0) {
         if((state_flags & METADATA_FLAG) > 0) {
             if((state_flags & PARTIAL_CRC_FLAG) == 0) {
                 if(received_par_crcs < num_update_blocks * BLOCK_SIZE) {
-                    if((error = fram_write_bytes((METADATA_SIZE + PAR_CRC_SIZE) * update_slot + METADATA_SIZE + received_par_crcs, crc_block, num_bytes)) != NO_ERROR) return throw_error(error);
+                    fram->write((METADATA_SIZE + PAR_CRC_SIZE) * update_slot + METADATA_SIZE + received_par_crcs, crc_block, num_bytes);
 
                     received_par_crcs += num_bytes;
                 } else return throw_error(PARAMETER_MISMATCH);
@@ -201,7 +200,7 @@ unsigned char* SoftwareUpdateService::send_missed_partials(unsigned char offset)
 }
 
 void SoftwareUpdateService::receive_block(unsigned char* data_block, uint16_t block_offset) {
-    unsigned char error;
+    //unsigned char error;
     payload_size = PAYLOAD_SIZE_OFFSET;
 
     if((state_flags & UPDATE_FLAG) > 0) {
@@ -210,7 +209,7 @@ void SoftwareUpdateService::receive_block(unsigned char* data_block, uint16_t bl
                 if(received_par_crcs < num_update_blocks * BLOCK_SIZE) {
                     if(block_offset < num_update_blocks) {
                         if(check_partial_crc(data_block, block_offset)) {
-                            if((error = slot_write_bytes(update_slot, block_offset * BLOCK_SIZE, data_block, BLOCK_SIZE)) != NO_ERROR) return throw_error(error);
+//                            slot_write_bytes(update_slot, block_offset * BLOCK_SIZE, data_block, BLOCK_SIZE);
                         } else {
 //                            if(missed_blocks.arr == NULL) {
 //                                missed_blocks.arr = malloc(BLOCK_SIZE / 2 * sizeof(uint16_t));
@@ -232,7 +231,7 @@ void SoftwareUpdateService::receive_block(unsigned char* data_block, uint16_t bl
 }
 
 bool SoftwareUpdateService::check_partial_crc(unsigned char* data_block, uint16_t block_offset) {
-    unsigned char error;
+    //unsigned char error;
     unsigned char val = 0;
 
     for(int i = 0; i < BLOCK_SIZE; i++) {
@@ -240,16 +239,13 @@ bool SoftwareUpdateService::check_partial_crc(unsigned char* data_block, uint16_
     }
 
     unsigned char crc;
-    if(error = fram_read_bytes((METADATA_SIZE + PAR_CRC_SIZE) * update_slot + METADATA_SIZE + block_offset, &crc, 1) != NO_ERROR) {
-        throw_error(error);
-        return false;
-    }
+    fram->read((METADATA_SIZE + PAR_CRC_SIZE) * update_slot + METADATA_SIZE + block_offset, &crc, 1);
 
     return crc == val;
 }
 
 void SoftwareUpdateService::check_md5(unsigned char slot_number) {
-    unsigned char error;
+    //unsigned char error;
     payload_size = PAYLOAD_SIZE_OFFSET + 1;
 
     unsigned char digest[CRC_SIZE];
@@ -258,22 +254,17 @@ void SoftwareUpdateService::check_md5(unsigned char slot_number) {
     MD5_Init(&md5_c);
 
     uint16_t num_blocks;
-    if((error = fram_read_bytes((METADATA_SIZE + PAR_CRC_SIZE) * slot_number + NUM_BLOCKS_OFFSET, (unsigned char*)&num_blocks, sizeof(uint16_t))) != NO_ERROR) return throw_error(error);
+    fram->read((METADATA_SIZE + PAR_CRC_SIZE) * slot_number + NUM_BLOCKS_OFFSET, (unsigned char*)&num_blocks, sizeof(uint16_t));
 
     unsigned char meta_crc[CRC_SIZE];
-    if((error = fram_read_bytes((METADATA_SIZE + PAR_CRC_SIZE) * slot_number + CRC_OFFSET, meta_crc, CRC_SIZE)) != NO_ERROR) return throw_error(error);
+    fram->read((METADATA_SIZE + PAR_CRC_SIZE) * slot_number + CRC_OFFSET, meta_crc, CRC_SIZE);
 
-    //TODO
-    unsigned char* buffer = (unsigned char*)malloc(num_blocks * BLOCK_SIZE * sizeof(unsigned char));
-    if(buffer == nullptr) return throw_error(MEMORY_FULL);
+    unsigned char buffer[BLOCK_SIZE];
 
-    if((error = slot_read_bytes(slot_number, 0, buffer, num_blocks * BLOCK_SIZE)) != NO_ERROR) {
-        free(buffer);
-        return throw_error(error);
+    for(int i = 0; i < num_blocks; i++) {
+//        if((error = slot_read_bytes(slot_number, num_blocks * i, buffer, BLOCK_SIZE);
+        MD5_Update(&md5_c, buffer, BLOCK_SIZE);
     }
-
-    MD5_Update(&md5_c, buffer, num_blocks * BLOCK_SIZE);
-    free(buffer);
 
     MD5_Final(digest, &md5_c);
 
@@ -289,7 +280,7 @@ void SoftwareUpdateService::check_md5(unsigned char slot_number) {
 }
 
 void SoftwareUpdateService::stop_OTA() {
-    unsigned char error;
+    //unsigned char error;
     payload_size = PAYLOAD_SIZE_OFFSET + 1;
 
     if((state_flags & UPDATE_FLAG) > 0) {
@@ -297,7 +288,7 @@ void SoftwareUpdateService::stop_OTA() {
         if(payload_data[COMMAND_RESPONSE] == COMMAND_ERROR) return throw_error(payload_data[COMMAND_DATA]);
         if(payload_data[COMMAND_DATA]) {
            unsigned char temp = FULL;
-           if((error = fram_write_bytes((METADATA_SIZE + PAR_CRC_SIZE) * update_slot, &temp, 1)) != NO_ERROR) return throw_error(error);
+           fram->write((METADATA_SIZE + PAR_CRC_SIZE) * update_slot, &temp, 1);
     //           free(missed_blocks.arr);
     //           missed_blocks.arr = NULL;
     //           missed_blocks.arr_size = 0;

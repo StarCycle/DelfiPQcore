@@ -282,5 +282,13 @@ void MD5_Final(unsigned char *result, MD5_CTX *ctx)
 	OUT(&result[8], ctx->c)
 	OUT(&result[12], ctx->d)
 
-	*ctx = (MD5_CTX){ 0 };
+	*ctx = (MD5_CTX){0};
+//	lo = 0;
+//	hi = 0;
+//    a = 0;
+//    b = 0;
+//    c = 0;
+//    d = 0;
+//    for(i = 0; i < 64; i++) buffer[i] = 0;
+//    for(i = 0; i < 16; i++) block[i] = 0;
 }

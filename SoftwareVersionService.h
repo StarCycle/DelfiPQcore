@@ -8,8 +8,6 @@
 #ifndef SOFTWAREVERSIONSERVICE_H_
 #define SOFTWAREVERSIONSERVICE_H_
 
-#include "PQ9Bus.h"
-#include "PQ9Frame.h"
 #include "Service.h"
 #include "DSerial.h"
 
