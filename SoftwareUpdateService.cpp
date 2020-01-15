@@ -19,7 +19,7 @@ extern DSerial serial;
  *
  *   Parameters:
  *   PQ9Frame &command          Frame received over the bus
- *   PQ9Sender &interface       Bus object
+ *   DataBus &interface       Bus object
  *   PQ9Frame &workingBuffer    Reference to buffer to store the response.
  *
  *   Returns:

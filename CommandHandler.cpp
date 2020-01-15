@@ -18,14 +18,14 @@ extern DSerial serial;
  *   CommandHandler Constructor
  *
  *   Parameters:
- *   PQ9Sender &interface       Physical Bus object
+ *   DataBus &interface       Physical Bus object
  *   Service **servArray        Array of services (commands) to handle
  *   int count                  Amount of services in Array
  *
  *   Returns:
  *
  */
-PQ9CommandHandler::PQ9CommandHandler(PQ9Sender &interface, Service **servArray, int count) :
+PQ9CommandHandler::PQ9CommandHandler(DataBus &interface, Service **servArray, int count) :
           Task(), bus(interface), services(servArray), servicesCount(count)
 {
     onValidCmd = 0;
