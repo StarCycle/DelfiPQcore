@@ -23,7 +23,7 @@ extern DSerial serial;
  *        false     :           Frame is not directed to this Service
  *
  */
-bool SoftwareUpdateService::process(PQ9Frame &command, DataBus &interface, PQ9Frame &workingBuffer)
+bool SoftwareUpdateService::process(DataFrame &command, DataBus &interface, DataFrame &workingBuffer)
 {
 
     if (command.getPayload()[0] == SOFTWAREUPDATE_SERVICE)

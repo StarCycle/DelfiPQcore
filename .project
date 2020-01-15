@@ -4,7 +4,6 @@
 	<comment></comment>
 	<projects>
 		<project>DWire</project>
-		<project>PQ9Bus</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>

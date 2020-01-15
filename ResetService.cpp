@@ -144,7 +144,7 @@ void ResetService::kickExternalWatchDog()
  *        false     :           Frame is not directed to this Service
  *
  */
-bool ResetService::process(PQ9Frame &command, DataBus &interface, PQ9Frame &workingBuffer)
+bool ResetService::process(DataFrame &command, DataBus &interface, DataFrame &workingBuffer)
 {
     if (command.getPayload()[0] == RESET_SERVICE)
     {

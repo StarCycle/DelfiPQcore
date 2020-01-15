@@ -24,7 +24,7 @@ template <class T>
 class HousekeepingService: public Service
 {
     // only allow types derived from TelemetryContainer
-    static_assert(std::is_base_of<TelemetryContainer, T>::value, "HousekeepingService template type is not derived from TelemetryContainer");
+    //static_assert(std::is_base_of<TelemetryContainer, T>::value, "HousekeepingService template type is not derived from TelemetryContainer");
 private:
     void stageTelemetry()
     {
@@ -44,7 +44,7 @@ protected:
     T telemetryContainer[2];
 
  public:
-    bool process( PQ9Frame &command, DataBus &interface, PQ9Frame &workingBuffer )
+    bool process( DataFrame &command, DataBus &interface, DataFrame &workingBuffer )
     {
         if (command.getPayload()[0] == HOUSEKEEPING_SERVICE)
         {

@@ -28,7 +28,7 @@ class ResetService: public Service
 
  public:
      ResetService( const unsigned long port, const unsigned long pin );
-     virtual bool process( PQ9Frame &command, DataBus &interface, PQ9Frame &workingBbuffer );
+     virtual bool process( DataFrame &command, DataBus &interface, DataFrame &workingBbuffer );
      void init();
      void refreshConfiguration();
      void kickExternalWatchDog();
