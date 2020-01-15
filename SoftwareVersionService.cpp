@@ -53,7 +53,7 @@ SoftwareVersionService::SoftwareVersionService(uint8_t versionString[]){
  *        false     :           Frame is not directed to this Service
  *
  */
-bool SoftwareVersionService::process(PQ9Frame &command, PQ9Sender &interface, PQ9Frame &workingBuffer)
+bool SoftwareVersionService::process(DataFrame &command, DataBus &interface, DataFrame &workingBuffer)
 {
     if (command.getPayload()[0] == SOFTWAREVERSION_SERVICE) //Check if this frame is directed to this service
     {

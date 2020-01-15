@@ -128,7 +128,7 @@ static const uint8_t CRC_TABLE[256] = { //CRC8-CCITT table, polynomial x^8+x^2+x
 class SoftwareUpdateService: public Service
 {
  public:
-     virtual bool process( PQ9Frame &command, PQ9Sender &interface, PQ9Frame &workingBuffer );
+     virtual bool process( DataFrame &command, DataBus &interface, DataFrame &workingBuffer );
  private:
      void start_OTA(unsigned char slot_number);
 

@@ -9,7 +9,7 @@
 #define SERVICE_H_
 
 #include "DataBus.h"
-#include "PQ9Frame.h"
+#include "DataFrame.h"
 
 class Service
 {
@@ -18,7 +18,7 @@ class Service
  public:
 
     virtual ~Service( ) {};
-    virtual bool process(PQ9Frame &command, DataBus &interface, PQ9Frame &workingBbuffer) = 0;
+    virtual bool process(DataFrame &command, DataBus &interface, DataFrame &workingBbuffer) = 0;
 };
 
 #endif /* SERVICE_H_ */

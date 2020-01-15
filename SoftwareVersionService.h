@@ -27,7 +27,7 @@ class SoftwareVersionService: public Service
  public:
     SoftwareVersionService();
     SoftwareVersionService(uint8_t versionNumberIn[]);
-    virtual bool process( PQ9Frame &command, PQ9Sender &interface, PQ9Frame &workingBbuffer );
+    virtual bool process( DataFrame &command, DataBus &interface, DataFrame &workingBbuffer );
 
 private:
     bool hasVersionNumber;

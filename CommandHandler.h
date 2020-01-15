@@ -1,8 +1,8 @@
 /*
- * PQ9CommandHandler.h
+ * CommandHandler.h
  *
- *  Created on: 24 Jul 2019
- *      Author: stefanosperett
+ *  Created on: 15 Jan 2020
+ *      Author: CasperBroekhuizen
  */
 
 #ifndef COMMANDHANDLER_H_
@@ -13,20 +13,89 @@
 #include "PingService.h"
 #include "DSerial.h"
 
-class PQ9CommandHandler: public Task
+extern DSerial serial;
+
+template <class Frame_Type>
+class CommandHandler: public Task
 {
  protected:
      DataBus &bus;
      Service** services;
      int servicesCount;
-     PQ9Frame rxBuffer, txBuffer;
+     Frame_Type rxBuffer, txBuffer;
      void (*onValidCmd)( void );
-     virtual void run();
+
+     virtual void run()
+     {
+         //Prepare Frame to be send back:
+         txBuffer.setDestination(rxBuffer.getSource());
+         txBuffer.setSource(bus.getAddress());
+
+         if (rxBuffer.getPayloadSize() > 1)
+         {
+             bool found = false;
+
+             for (int i = 0; i < servicesCount; i++)
+             {
+                 if (services[i]->process(rxBuffer, bus, txBuffer)) // Does any of the Services Handle this command?
+                 {
+                     // stop the loop if a service is found
+                     found = true;
+                     break;
+                 }
+             }
+
+             if (!found)
+             {
+                 serial.print("Unknown Service (");
+                 serial.print(rxBuffer.getPayload()[0], DEC);
+                 serial.println(")");
+
+                 txBuffer.setPayloadSize(2);
+                 txBuffer.getPayload()[0] = 0;
+                 txBuffer.getPayload()[1] = 0;
+                 bus.transmit(txBuffer);
+                 return;
+             }
+             else
+             {
+                 if (onValidCmd)
+                 {
+                     onValidCmd();
+                 }
+                 return;
+             }
+         }
+         else
+         {
+             // invalid payload size
+             // what should we do here?
+             serial.println("Invalid Command, size must be > 1");
+             txBuffer.setPayloadSize(2);
+             txBuffer.getPayload()[0] = 0;
+             txBuffer.getPayload()[1] = 0;
+             bus.transmit(txBuffer);
+             return;
+         }
+     };
 
  public:
-     PQ9CommandHandler( DataBus &bus, Service **servArray, int count );
-     void received( PQ9Frame &newFrame );
-     void onValidCommand(void (*function)( void ));
+     CommandHandler(DataBus &interface, Service **servArray, int count) :
+         Task(), bus(interface), services(servArray), servicesCount(count)
+     {
+         onValidCmd = 0;
+     };
+
+     void received( DataFrame &newFrame )
+     {
+         newFrame.copy(rxBuffer);
+         notify();
+     };
+
+     void onValidCommand(void (*function)( void ))
+     {
+         onValidCmd = function;
+     };
 };
 
 #endif /* COMMANDHANDLER_H_ */
