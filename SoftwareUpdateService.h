@@ -21,13 +21,17 @@ extern "C" {
 #define FRAM_SIZE               32768
 #define BLOCK_SIZE              32
 #define CRC_SIZE                16
-#define SLOT_SIZE               131072
+#define BANK_SIZE               131072
+#define SLOT_SIZE               (BANK_SIZE / 2)
+#define SECTORS_PER_SLOT        16
+#define SECTOR_SIZE             (SLOT_SIZE / SECTORS_PER_SLOT)
 #define NUM_SLOTS               2
 #define PAR_CRC_SIZE            (SLOT_SIZE / BLOCK_SIZE)
 #define METADATA_SIZE           (CRC_SIZE + 4 + 2 + 1)
 
-#define  ACKNOWLEDGE            13
-#define NOT_ACKNOWLEDGE         10
+#define BANK1_ADDRESS           0x20000
+
+#define ACKNOWLEDGE             13
 
 #define PAYLOAD_SIZE_OFFSET     3
 

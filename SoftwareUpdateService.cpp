@@ -146,13 +146,14 @@ void SoftwareUpdateService::start_OTA(unsigned char slot_number) {
 
         if(state == EMPTY) {
             state_flags |= UPDATE_FLAG;
-            state_flags &= ~METADATA_FLAG;
+            state_flags &= ~(METADATA_FLAG | PARTIAL_CRC_FLAG);
+            received_par_crcs = 0;
             update_slot = slot_number;
             state = PARTIAL;
             if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
             fram->write((METADATA_SIZE + PAR_CRC_SIZE) * slot_number, &state, 1);
-        } else if(state == PARTIAL) {
-            state_flags |= UPDATE_FLAG | METADATA_FLAG;
+        } else if(state == PARTIAL && state_flags & METADATA_FLAG > 0) {
+            state_flags |= UPDATE_FLAG;
             update_slot = slot_number;
         } else return throw_error(SLOT_NOT_EMPTY);
     } else return throw_error(UPDATE_ALREADY_STARTED);
@@ -202,7 +203,11 @@ void SoftwareUpdateService::receive_block(unsigned char* data_block, uint16_t bl
                 if(received_par_crcs < num_update_blocks * BLOCK_SIZE) {
                     if(block_offset < num_update_blocks) {
                         if(check_partial_crc(data_block, block_offset)) {
-//                            slot_write_bytes(update_slot, block_offset * BLOCK_SIZE, data_block, BLOCK_SIZE);
+                            unsigned int sector =  1 << (((block_offset * BLOCK_SIZE + update_slot * SLOT_SIZE)) / SECTOR_SIZE);
+                            serial.println(sector, HEX);
+                            if(!MAP_FlashCtl_unprotectSector(FLASH_MAIN_MEMORY_SPACE_BANK1, sector)) return throw_error(NO_SLOT_ACCESS);
+                            if(!MAP_FlashCtl_programMemory(data_block, (void*)(BANK1_ADDRESS + update_slot * SLOT_SIZE + block_offset * BLOCK_SIZE), BLOCK_SIZE)) return throw_error(NO_SLOT_ACCESS);
+                            if(!MAP_FlashCtl_protectSector(FLASH_MAIN_MEMORY_SPACE_BANK1, sector)) return throw_error(NO_SLOT_ACCESS);
                             serial.println("CRC matches for this block!");
                         } else {
                             if(payload_data[COMMAND_RESPONSE] == COMMAND_ERROR) return;
@@ -248,17 +253,7 @@ void SoftwareUpdateService::check_md5(unsigned char slot_number) {
     if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
     fram->read((METADATA_SIZE + PAR_CRC_SIZE) * slot_number + CRC_OFFSET, meta_crc, CRC_SIZE);
 
-    unsigned char buffer[BLOCK_SIZE];
-    unsigned char block0[BLOCK_SIZE] = { 240, 176, 206, 201, 137, 58, 228, 181, 106, 50, 215, 161, 2, 251, 7, 69, 187, 112, 113, 204, 159, 116, 74, 126, 78, 201, 109, 87, 213, 233, 153, 198 };
-    unsigned char block1[BLOCK_SIZE] = { 153, 103, 143, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
-
-//    for(int i = 0; i < num_blocks; i++) {
-//        if((error = slot_read_bytes(slot_number, num_blocks * i, buffer, BLOCK_SIZE);
-//        MD5_Update(&md5_c, buffer, BLOCK_SIZE);
-//    }
-
-    MD5_Update(&md5_c, block0, BLOCK_SIZE);
-    MD5_Update(&md5_c, block1, BLOCK_SIZE);
+    MD5_Update(&md5_c, (unsigned char*)(BANK1_ADDRESS + slot_number * SLOT_SIZE), num_blocks * BLOCK_SIZE);
 
     MD5_Final(digest, &md5_c);
 
@@ -278,13 +273,14 @@ void SoftwareUpdateService::stop_OTA() {
 
     if((state_flags & UPDATE_FLAG) > 0) {
         state_flags &= ~UPDATE_FLAG;
+        unsigned int temp_slot = update_slot
         update_slot = 0;
         check_md5(update_slot);
         if(payload_data[COMMAND_RESPONSE] == COMMAND_ERROR) return throw_error(payload_data[COMMAND_DATA]);
         if(payload_data[COMMAND_DATA]) {
            unsigned char temp = FULL;
            if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
-           fram->write((METADATA_SIZE + PAR_CRC_SIZE) * update_slot, &temp, 1);
+           fram->write((METADATA_SIZE + PAR_CRC_SIZE) * temp_slot, &temp, 1);
         } else return throw_error(MD5_MISMATCH);
     } else return throw_error(UPDATE_NOT_STARTED);
 }
@@ -296,6 +292,11 @@ void SoftwareUpdateService::erase_slot(unsigned char slot) {
        unsigned char empty[METADATA_SIZE] = { 0 };
        if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
        fram->write((METADATA_SIZE + PAR_CRC_SIZE) * slot, empty, METADATA_SIZE);
+
+       if(!MAP_FlashCtl_unprotectSector(FLASH_MAIN_MEMORY_SPACE_BANK1, 0xFFFF << (16 * slot))) return throw_error(NO_SLOT_ACCESS);
+       if(!MAP_FlashCtl_performMassErase()) return throw_error(NO_SLOT_ACCESS);
+       if(!MAP_FlashCtl_protectSector(FLASH_MAIN_MEMORY_SPACE_BANK1, 0xFFFF << (16 * slot))) return throw_error(NO_SLOT_ACCESS);
+
        state_flags &= ~ERASE_FLAG;
     } else return throw_error(UPDATE_ALREADY_STARTED);
 }
