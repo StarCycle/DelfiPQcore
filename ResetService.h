@@ -10,6 +10,7 @@
 
 #include "Service.h"
 #include "DSerial.h"
+#include "ResetCodes.h"
 
 #define RESET_SERVICE           19
 #define RESET_ERROR              0
@@ -25,6 +26,17 @@ class ResetService: public Service
  protected:
      const unsigned long WDIPort;
      const unsigned long WDIPin;
+
+//     uint32_t softResetStat;
+//     uint32_t hardResetStat;
+//     uint32_t pssResetStat;
+//     uint32_t pcmResetStat;
+//     uint32_t pinResetStat;
+//     uint32_t rebootResetStat;
+//     uint32_t csResetStat;
+
+     uint32_t resetStatus = 0;
+
 
  public:
      ResetService( const unsigned long port, const unsigned long pin );
