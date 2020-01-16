@@ -249,11 +249,16 @@ void SoftwareUpdateService::check_md5(unsigned char slot_number) {
     fram->read((METADATA_SIZE + PAR_CRC_SIZE) * slot_number + CRC_OFFSET, meta_crc, CRC_SIZE);
 
     unsigned char buffer[BLOCK_SIZE];
+    unsigned char block0[BLOCK_SIZE] = { 240, 176, 206, 201, 137, 58, 228, 181, 106, 50, 215, 161, 2, 251, 7, 69, 187, 112, 113, 204, 159, 116, 74, 126, 78, 201, 109, 87, 213, 233, 153, 198 };
+    unsigned char block1[BLOCK_SIZE] = { 153, 103, 143, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0 };
 
-    for(int i = 0; i < num_blocks; i++) {
+//    for(int i = 0; i < num_blocks; i++) {
 //        if((error = slot_read_bytes(slot_number, num_blocks * i, buffer, BLOCK_SIZE);
-        MD5_Update(&md5_c, buffer, BLOCK_SIZE);
-    }
+//        MD5_Update(&md5_c, buffer, BLOCK_SIZE);
+//    }
+
+    MD5_Update(&md5_c, block0, BLOCK_SIZE);
+    MD5_Update(&md5_c, block1, BLOCK_SIZE);
 
     MD5_Final(digest, &md5_c);
 
