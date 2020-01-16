@@ -29,7 +29,7 @@ extern "C" {
 #define  ACKNOWLEDGE            13
 #define NOT_ACKNOWLEDGE         10
 
-#define PAYLOAD_SIZE_OFFSET     2
+#define PAYLOAD_SIZE_OFFSET     3
 
 enum slot_status{
     EMPTY = 0x00,
@@ -41,9 +41,9 @@ enum commands{
     START_OTA,
     RECEIVE_METADATA,
     SEND_METADATA,
-    SEND_PARTIAL_CRCS,
-    RECEIVE_MISSED_PARTIALS,
-    SEND_BLOCK,
+    RECEIVE_PARTIAL_CRCS,
+    SEND_MISSED_PARTIALS,
+    RECEIVE_BLOCK,
     CHECK_MD5,
     STOP_OTA,
     ERASE_SLOT
@@ -145,18 +145,19 @@ class SoftwareUpdateService: public Service
      void receive_block(unsigned char* data_block, unsigned short block_offset);
      bool check_partial_crc(unsigned char* data_block, unsigned short block_offset);
 
-     unsigned char* send_missed_partials(unsigned char offset);
-
      void check_md5(unsigned char slot_number);
 
      void stop_OTA();
 
-     void erase_slot(unsigned char param);
+     void erase_slot(unsigned char slot);
 
+     void print_metadata(unsigned char* metadata);
+     void print_response();
      void throw_error(unsigned char error);
 
      unsigned char state_flags = 0;
      unsigned char update_slot;
+     unsigned char slot_erase;
      unsigned short num_update_blocks = 0;
      unsigned short received_par_crcs = 0;
 
