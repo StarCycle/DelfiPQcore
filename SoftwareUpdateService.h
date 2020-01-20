@@ -50,7 +50,8 @@ enum commands{
     RECEIVE_BLOCK,
     CHECK_MD5,
     STOP_OTA,
-    ERASE_SLOT
+    ERASE_SLOT,
+    EXECUTE_SLOT
 };
 
 enum command_offsets {
@@ -154,6 +155,8 @@ class SoftwareUpdateService: public Service
      void stop_OTA();
 
      void erase_slot(unsigned char slot);
+
+     void execute_slot(unsigned char slot);
 
      void print_metadata(unsigned char* metadata);
      void print_response();

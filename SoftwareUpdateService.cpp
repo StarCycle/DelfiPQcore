@@ -120,6 +120,15 @@ bool SoftwareUpdateService::process(DataFrame &command, DataBus &interface, Data
                 }
             } else throw_error(PARAMETER_MISMATCH);
             break;
+        case EXECUTE_SLOT:
+            if(command.getPayloadSize() == PAYLOAD_SIZE_OFFSET + 1) {
+                if(command.getPayload()[COMMAND_DATA] == 1 || command.getPayload()[COMMAND_DATA] == 2) {
+                    execute_slot(command.getPayload()[COMMAND_DATA] - 1);
+                    if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) serial.println("\nOTA started!");
+
+                } else throw_error(SLOT_OUT_OF_RANGE);
+            } else throw_error(PARAMETER_MISMATCH);
+            break;
 
         default:
             break;
@@ -204,7 +213,6 @@ void SoftwareUpdateService::receive_block(unsigned char* data_block, uint16_t bl
                     if(block_offset < num_update_blocks) {
                         if(check_partial_crc(data_block, block_offset)) {
                             unsigned int sector =  1 << (((block_offset * BLOCK_SIZE + update_slot * SLOT_SIZE)) / SECTOR_SIZE);
-                            serial.println(sector, HEX);
                             if(!MAP_FlashCtl_unprotectSector(FLASH_MAIN_MEMORY_SPACE_BANK1, sector)) return throw_error(NO_SLOT_ACCESS);
                             if(!MAP_FlashCtl_programMemory(data_block, (void*)(BANK1_ADDRESS + update_slot * SLOT_SIZE + block_offset * BLOCK_SIZE), BLOCK_SIZE)) return throw_error(NO_SLOT_ACCESS);
                             if(!MAP_FlashCtl_protectSector(FLASH_MAIN_MEMORY_SPACE_BANK1, sector)) return throw_error(NO_SLOT_ACCESS);
@@ -273,9 +281,9 @@ void SoftwareUpdateService::stop_OTA() {
 
     if((state_flags & UPDATE_FLAG) > 0) {
         state_flags &= ~UPDATE_FLAG;
-        unsigned int temp_slot = update_slot
+        unsigned int temp_slot = update_slot;
         update_slot = 0;
-        check_md5(update_slot);
+        check_md5(temp_slot);
         if(payload_data[COMMAND_RESPONSE] == COMMAND_ERROR) return throw_error(payload_data[COMMAND_DATA]);
         if(payload_data[COMMAND_DATA]) {
            unsigned char temp = FULL;
@@ -297,8 +305,16 @@ void SoftwareUpdateService::erase_slot(unsigned char slot) {
        if(!MAP_FlashCtl_performMassErase()) return throw_error(NO_SLOT_ACCESS);
        if(!MAP_FlashCtl_protectSector(FLASH_MAIN_MEMORY_SPACE_BANK1, 0xFFFF << (16 * slot))) return throw_error(NO_SLOT_ACCESS);
 
-       state_flags &= ~ERASE_FLAG;
+       state_flags &= ~(ERASE_FLAG | METADATA_FLAG);
     } else return throw_error(UPDATE_ALREADY_STARTED);
+}
+
+void SoftwareUpdateService::execute_slot(unsigned char slot) {
+    check_md5(slot);
+    if(payload_data[COMMAND_RESPONSE] == COMMAND_ERROR) return throw_error(payload_data[COMMAND_DATA]);
+
+    void (*slot_function)(void) = (void (*)())(BANK1_ADDRESS + slot * SLOT_SIZE);
+    slot_function();
 }
 
 void SoftwareUpdateService::print_response() {
@@ -355,6 +371,9 @@ void SoftwareUpdateService::print_response() {
         break;
     case ERASE_SLOT:
         serial.println("ERASE_SLOT");
+        break;
+    case EXECUTE_SLOT:
+        serial.println("EXECUTE_SLOT");
         break;
     default:
         break;
