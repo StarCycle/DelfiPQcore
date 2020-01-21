@@ -40,7 +40,7 @@ class ResetService: public Service
 
  public:
      ResetService( const unsigned long port, const unsigned long pin );
-     virtual bool process( DataFrame &command, DataBus &interface, DataFrame &workingBbuffer );
+     virtual bool process( DataMessage &command, DataMessage &workingBbuffer );
      void init();
      void refreshConfiguration();
      void kickExternalWatchDog();

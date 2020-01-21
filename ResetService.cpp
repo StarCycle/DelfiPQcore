@@ -8,6 +8,14 @@
 #include "ResetService.h"
 
 extern DSerial serial;
+ResetService* resetServiceStub;
+void _forceHardReset(){
+    resetServiceStub->forceHardReset();
+}
+void _forceSoftReset(){
+    resetServiceStub->forceSoftReset();
+}
+
 
 bool CheckResetSRC(uint32_t Code, uint32_t SRC){
     return ((Code & SRC) == SRC);
@@ -49,7 +57,9 @@ void resetHandler()
  *
  */
 ResetService::ResetService(const unsigned long WDport, const unsigned long WDpin) :
-        WDIPort(WDport), WDIPin(WDpin) {}
+        WDIPort(WDport), WDIPin(WDpin) {
+    resetServiceStub = this;
+}
 
 /**
  *
@@ -332,39 +342,42 @@ void ResetService::kickExternalWatchDog()
  *        false     :           Frame is not directed to this Service
  *
  */
-bool ResetService::process(DataFrame &command, DataBus &interface, DataFrame &workingBuffer)
+bool ResetService::process(DataMessage &command, DataMessage &workingBuffer)
 {
     if (command.getPayload()[0] == RESET_SERVICE)
     {
+        serial.print("ResetService: ");
         // prepare response frame
-        workingBuffer.setDestination(command.getSource());
-        workingBuffer.setSource(interface.getAddress());
-        workingBuffer.setPayloadSize(3);
+        //workingBuffer.setDestination(command.getSource());
+        //workingBuffer.setSource(interface.getAddress());
+        workingBuffer.setSize(3);
         workingBuffer.getPayload()[0] = RESET_SERVICE;
 
-        if ((command.getPayloadSize() == 3) && (command.getPayload()[1] == RESET_REQUEST))
+        if (command.getPayload()[1] == SERVICE_RESPONSE_REQUEST)
         {
+            serial.print("ResetRequest: ");
             workingBuffer.getPayload()[2] = command.getPayload()[2];
             switch(command.getPayload()[2])
             {
                 case RESET_SOFT:
-                    workingBuffer.getPayload()[1] = RESET_RESPONSE;
+                    workingBuffer.getPayload()[1] = SERVICE_RESPONSE_REPLY;
                     // send response: doing it here to make sure
                     // a response is sent before reset but not 2
-                    interface.transmit(workingBuffer);
+                    //interface.transmit(workingBuffer);
 
                     // now reset the MCU
-                    forceSoftReset();
+                    serial.println("SofReset set?");
+                    this->setPostFunc(_forceSoftReset);
                     break;
 
                 case RESET_HARD:
-                    workingBuffer.getPayload()[1] = RESET_RESPONSE;
+                    workingBuffer.getPayload()[1] = SERVICE_RESPONSE_REPLY;
                     // send response: doing it here to make sure
                     // a response is sent before reset but not 2
-                    interface.transmit(workingBuffer);
+                    //interface.transmit(workingBuffer);
 
                     // now force the external watch-dog to reset the MCU
-                    forceHardReset();
+                    this->setPostFunc(_forceHardReset);
                     break;
 
                     // not implemented yet, give error to notify it
@@ -377,10 +390,10 @@ bool ResetService::process(DataFrame &command, DataBus &interface, DataFrame &wo
                     break;*/
 
                 default:
-                    workingBuffer.getPayload()[1] = RESET_ERROR;
+                    workingBuffer.getPayload()[1] = SERVICE_RESPONSE_ERROR;
                     // send response: doing it here to make sure
                     // a response is sent before reset but not 2
-                    interface.transmit(workingBuffer);
+                    //interface.transmit(workingBuffer);
                     break;
             }
         }
@@ -390,7 +403,7 @@ bool ResetService::process(DataFrame &command, DataBus &interface, DataFrame &wo
             workingBuffer.getPayload()[1] = RESET_ERROR;
             // send response: doing it here to make sure
             // a response is sent before reset but not 2
-            interface.transmit(workingBuffer);
+            //interface.transmit(workingBuffer);
         }
 
         // command processed
@@ -452,3 +465,4 @@ void ResetService::forceSoftReset()
     }
     MAP_SysCtl_rebootDevice();
 }
+

@@ -44,36 +44,36 @@ protected:
     T telemetryContainer[2];
 
  public:
-    bool process( DataFrame &command, DataBus &interface, DataFrame &workingBuffer )
+    bool process( DataMessage &command, DataMessage &workingBuffer )
     {
         if (command.getPayload()[0] == HOUSEKEEPING_SERVICE)
         {
             // prepare response frame
-            workingBuffer.setDestination(command.getSource());
-            workingBuffer.setSource(interface.getAddress());
+            //workingBuffer.setDestination(command.getSource());
+            //workingBuffer.setSource(interface.getAddress());
             workingBuffer.getPayload()[0] = HOUSEKEEPING_SERVICE;
 
-            if (command.getPayload()[1] == HOUSEKEEPING_REQUEST)
+            if (command.getPayload()[1] == SERVICE_RESPONSE_REQUEST)
             {
                 serial.println("HousekeepingService: Request");
 
                 // respond to housekeeping request
-                workingBuffer.getPayload()[1] = HOUSEKEEPING_RESPONSE;
+                workingBuffer.getPayload()[1] = SERVICE_RESPONSE_REPLY;
                 for (int i = 0; i < getTelemetry()->size(); i++)
                 {
                     workingBuffer.getPayload()[i + 2] = getTelemetry()->getArray()[i];
                 }
-                workingBuffer.setPayloadSize(2 + getTelemetry()->size());
+                workingBuffer.setSize(2 + getTelemetry()->size());
             }
             else
             {
                 // unknown request
-                workingBuffer.getPayload()[1] = HOUSEKEEPING_ERROR;
-                workingBuffer.setPayloadSize(2);
+                workingBuffer.getPayload()[1] = SERVICE_RESPONSE_ERROR;
+                workingBuffer.setSize(2);
             }
 
             // send response
-            interface.transmit(workingBuffer);
+            //interface.transmit(workingBuffer);
             // command processed
             return true;
         }

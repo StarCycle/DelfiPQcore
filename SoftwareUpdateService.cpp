@@ -23,7 +23,7 @@ extern DSerial serial;
  *        false     :           Frame is not directed to this Service
  *
  */
-bool SoftwareUpdateService::process(DataFrame &command, DataBus &interface, DataFrame &workingBuffer)
+bool SoftwareUpdateService::process(DataMessage &command, DataMessage &workingBuffer)
 {
 
     if (command.getPayload()[0] == SOFTWAREUPDATE_SERVICE)
