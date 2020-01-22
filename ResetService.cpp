@@ -32,7 +32,10 @@ bool CheckResetSRC(uint32_t Code, uint32_t SRC){
  */
 void resetHandler()
 {
-    serial.println("ResetService: internal watch-dog reset...");
+    serial.println("ResetService: internal watch-dog reset... ");
+    serial.println("");
+    //Add WDT time=out to reset-cause register
+    RSTCTL->HARDRESET_SET |= RESET_HARD_WDTTIME;
     // TODO: flush the serial port to make sure all characters have been trinted out before resetting
     uint32_t d = MAP_CS_getMCLK() * 4 / 9600;
     for(uint32_t k = 0; k < d;  k++)
@@ -42,7 +45,7 @@ void resetHandler()
     // TODO: replace this with a power cycle to protect also the RS485 driver
     // for now, at least reset, till the power cycle gets implemented in HW
     // MAP_SysCtl_rebootDevice();
-    MAP_ResetCtl_initiateHardResetWithSource(RESET_HARD_WDTTIME);
+    MAP_ResetCtl_initiateHardReset();
 }
 
 /**
