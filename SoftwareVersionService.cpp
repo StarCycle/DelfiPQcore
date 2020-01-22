@@ -72,6 +72,7 @@ bool SoftwareVersionService::process(DataFrame &command, DataBus &interface, Dat
                 workingBuffer.setPayloadSize(10);
                 workingBuffer.getPayload()[1] = SOFTWAREVERSION_ACCEPT;
                 serial.println("has SW Version!");
+                serial.println("23456789");
                 workingBuffer.getPayload()[2] = this->versionNumber[0];
                 workingBuffer.getPayload()[3] = this->versionNumber[1];
                 workingBuffer.getPayload()[4] = this->versionNumber[2];

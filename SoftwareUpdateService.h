@@ -20,14 +20,15 @@ extern "C" {
 
 #define FRAM_SIZE               32768
 #define BLOCK_SIZE              32
-#define CRC_SIZE                16
+#define MD5_SIZE                16
 #define BANK_SIZE               131072
 #define SLOT_SIZE               (BANK_SIZE / 2)
 #define SECTORS_PER_SLOT        16
 #define SECTOR_SIZE             (SLOT_SIZE / SECTORS_PER_SLOT)
 #define NUM_SLOTS               2
 #define PAR_CRC_SIZE            (SLOT_SIZE / BLOCK_SIZE)
-#define METADATA_SIZE           (CRC_SIZE + 4 + 2 + 1)
+#define METADATA_SIZE           (MD5_SIZE + 8 + 2 + 1)
+#define MAX_BLOCK_AMOUNT        (SLOT_SIZE / BLOCK_SIZE)
 
 #define BANK1_ADDRESS           0x20000
 
@@ -51,7 +52,8 @@ enum commands{
     CHECK_MD5,
     STOP_OTA,
     ERASE_SLOT,
-    EXECUTE_SLOT
+    SET_BOOT_SLOT,
+    GET_MISSED_BLOCKS
 };
 
 enum command_offsets {
@@ -90,14 +92,15 @@ enum error_codes{
     CRC_MISMATCH,
     MD5_MISMATCH,
     OFFSET_OUT_OF_RANGE,
-    SLOT_NOT_EMPTY
+    SLOT_NOT_EMPTY,
+    UPDATE_TO_BIG
 };
 
 enum metadata_offset {
     STATUS_OFFSET,
     CRC_OFFSET,
-    VERSION_OFFSET = CRC_OFFSET + CRC_SIZE,
-    NUM_BLOCKS_OFFSET = VERSION_OFFSET + 4
+    VERSION_OFFSET = CRC_OFFSET + MD5_SIZE,
+    NUM_BLOCKS_OFFSET = VERSION_OFFSET + 8
 };
 
 static const uint8_t CRC_TABLE[256] = { //CRC8-CCITT table, polynomial x^8+x^2+x+1
@@ -156,10 +159,11 @@ class SoftwareUpdateService: public Service
 
      void erase_slot(unsigned char slot);
 
-     void execute_slot(unsigned char slot);
+     void set_boot_slot(unsigned char slot, bool always);
+
+     void get_missed_blocks();
 
      void print_metadata(unsigned char* metadata);
-     void print_response();
      void throw_error(unsigned char error);
 
      unsigned char state_flags = 0;
@@ -170,6 +174,8 @@ class SoftwareUpdateService: public Service
 
      unsigned char* payload_data;
      unsigned char payload_size;
+
+     unsigned int blocks_received[MAX_BLOCK_AMOUNT/sizeof(unsigned int)] = { 0 };
 
      MB85RS* fram;
 };

@@ -2,7 +2,7 @@
  * SoftwareUpdateService.cpp
  *
  *  Created on: 27 Jul 2019
- *      Author: stefanosperett
+ *      Author: Jasper Haenen
  */
 
 #include "SoftwareUpdateService.h"
@@ -35,7 +35,7 @@ bool SoftwareUpdateService::process(DataFrame &command, DataBus &interface, Data
         workingBuffer.setSource(interface.getAddress());
         workingBuffer.setPayloadSize(PAYLOAD_SIZE_OFFSET);
         workingBuffer.getPayload()[COMMAND_SERVICE] = SOFTWAREUPDATE_SERVICE;
-        workingBuffer.getPayload()[COMMAND_RESPONSE] = COMMAND_RESPONSE;
+        workingBuffer.getPayload()[COMMAND_RESPONSE] = COMMAND_REPLY;
         workingBuffer.getPayload()[COMMAND_METHOD] = command.getPayload()[COMMAND_METHOD];
 
         payload_data = workingBuffer.getPayload();
@@ -120,22 +120,24 @@ bool SoftwareUpdateService::process(DataFrame &command, DataBus &interface, Data
                 }
             } else throw_error(PARAMETER_MISMATCH);
             break;
-        case EXECUTE_SLOT:
+        case SET_BOOT_SLOT:
             if(command.getPayloadSize() == PAYLOAD_SIZE_OFFSET + 1) {
                 if(command.getPayload()[COMMAND_DATA] == 1 || command.getPayload()[COMMAND_DATA] == 2) {
-                    execute_slot(command.getPayload()[COMMAND_DATA] - 1);
-                    if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) serial.println("\nOTA started!");
+                    set_boot_slot(command.getPayload()[COMMAND_DATA] - 1, false);
+                    if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) serial.println("\nSlot code executed successfully!");
 
                 } else throw_error(SLOT_OUT_OF_RANGE);
             } else throw_error(PARAMETER_MISMATCH);
             break;
+        case GET_MISSED_BLOCKS:
 
+            break;
         default:
             break;
         }
 
         workingBuffer.setPayloadSize(payload_size);
-        print_response();
+        interface.transmit(workingBuffer);
         // command processed
         return true;
     } else {
@@ -173,10 +175,13 @@ void SoftwareUpdateService::receive_metadata(unsigned char* metadata) {
 
     if((state_flags & UPDATE_FLAG) > 0) {
         if((state_flags & METADATA_FLAG) == 0) {
-            if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
-            fram->write((METADATA_SIZE + PAR_CRC_SIZE) * update_slot + 1, metadata, METADATA_SIZE - 1);
-            num_update_blocks = metadata[NUM_BLOCKS_OFFSET - 1] | (metadata[NUM_BLOCKS_OFFSET] << 8);
-            state_flags |= METADATA_FLAG;
+            unsigned short temp_num_blocks = metadata[NUM_BLOCKS_OFFSET - 1] | (metadata[NUM_BLOCKS_OFFSET] << 8);
+            if(temp_num_blocks <= MAX_BLOCK_AMOUNT) {
+                if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
+                fram->write((METADATA_SIZE + PAR_CRC_SIZE) * update_slot + 1, metadata, METADATA_SIZE - 1);
+                num_update_blocks = temp_num_blocks;
+                state_flags |= METADATA_FLAG;
+            } else return throw_error(UPDATE_TO_BIG);
         } else return throw_error(METADATA_ALREADY_RECEIVED);
     } else return throw_error(UPDATE_NOT_STARTED);
 }
@@ -210,13 +215,14 @@ void SoftwareUpdateService::receive_block(unsigned char* data_block, uint16_t bl
         if((state_flags & METADATA_FLAG) > 0) {
             if((state_flags & PARTIAL_CRC_FLAG) == 0) {
                 if(received_par_crcs < num_update_blocks * BLOCK_SIZE) {
-                    if(block_offset < num_update_blocks) {
+                    if(block_offset <= num_update_blocks) {
                         if(check_partial_crc(data_block, block_offset)) {
+                            serial.print(block_offset, DEC);
                             unsigned int sector =  1 << (((block_offset * BLOCK_SIZE + update_slot * SLOT_SIZE)) / SECTOR_SIZE);
                             if(!MAP_FlashCtl_unprotectSector(FLASH_MAIN_MEMORY_SPACE_BANK1, sector)) return throw_error(NO_SLOT_ACCESS);
                             if(!MAP_FlashCtl_programMemory(data_block, (void*)(BANK1_ADDRESS + update_slot * SLOT_SIZE + block_offset * BLOCK_SIZE), BLOCK_SIZE)) return throw_error(NO_SLOT_ACCESS);
                             if(!MAP_FlashCtl_protectSector(FLASH_MAIN_MEMORY_SPACE_BANK1, sector)) return throw_error(NO_SLOT_ACCESS);
-                            serial.println("CRC matches for this block!");
+                            //serial.println("CRC matches for this block!");
                         } else {
                             if(payload_data[COMMAND_RESPONSE] == COMMAND_ERROR) return;
                             return throw_error(CRC_MISMATCH);
@@ -248,7 +254,7 @@ bool SoftwareUpdateService::check_partial_crc(unsigned char* data_block, uint16_
 void SoftwareUpdateService::check_md5(unsigned char slot_number) {
     payload_size = PAYLOAD_SIZE_OFFSET + 1;
 
-    unsigned char digest[CRC_SIZE];
+    unsigned char digest[MD5_SIZE];
 
     MD5_CTX md5_c;
     MD5_Init(&md5_c);
@@ -257,16 +263,16 @@ void SoftwareUpdateService::check_md5(unsigned char slot_number) {
     if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
     fram->read((METADATA_SIZE + PAR_CRC_SIZE) * slot_number + NUM_BLOCKS_OFFSET, (unsigned char*)&num_blocks, sizeof(uint16_t));
 
-    unsigned char meta_crc[CRC_SIZE];
+    unsigned char meta_crc[MD5_SIZE];
     if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
-    fram->read((METADATA_SIZE + PAR_CRC_SIZE) * slot_number + CRC_OFFSET, meta_crc, CRC_SIZE);
+    fram->read((METADATA_SIZE + PAR_CRC_SIZE) * slot_number + CRC_OFFSET, meta_crc, MD5_SIZE);
 
     MD5_Update(&md5_c, (unsigned char*)(BANK1_ADDRESS + slot_number * SLOT_SIZE), num_blocks * BLOCK_SIZE);
 
     MD5_Final(digest, &md5_c);
 
     bool equal = true;
-    for(int i = 0; i < CRC_SIZE; i++) {
+    for(int i = 0; i < MD5_SIZE; i++) {
         if(digest[i] != meta_crc[i]) {
             equal = false;
             break;
@@ -309,88 +315,21 @@ void SoftwareUpdateService::erase_slot(unsigned char slot) {
     } else return throw_error(UPDATE_ALREADY_STARTED);
 }
 
-void SoftwareUpdateService::execute_slot(unsigned char slot) {
+void SoftwareUpdateService::set_boot_slot(unsigned char slot, bool permenant) {
+    if(permenant){
+
+    }
     check_md5(slot);
     if(payload_data[COMMAND_RESPONSE] == COMMAND_ERROR) return throw_error(payload_data[COMMAND_DATA]);
 
-    void (*slot_function)(void) = (void (*)())(BANK1_ADDRESS + slot * SLOT_SIZE);
-    slot_function();
+    //void (*slot_function)(void) = (void (*)())(BANK1_ADDRESS + slot * SLOT_SIZE + 0x312c);
+    uint8_t boot2new = 1;
+    fram->write(0x7FF0, &boot2new, 1);
+    MAP_SysCtl_rebootDevice();
+    //slot_function();
 }
 
-void SoftwareUpdateService::print_response() {
-    serial.println("Response data:");
 
-    serial.print("Payload size: ");
-    serial.println(payload_size, DEC);
-
-    serial.print("Service: ");
-    serial.println(payload_data[COMMAND_SERVICE], DEC);
-
-    serial.print("payload_data type: ");
-    switch (payload_data[COMMAND_RESPONSE])
-    {
-    case COMMAND_ERROR:
-        serial.println("Error");
-        break;
-    case COMMAND_REQUEST:
-        serial.println("Request");
-        break;
-    case COMMAND_REPLY:
-        serial.println("Reply");
-        break;
-    default:
-        break;
-    }
-
-    serial.print("Method: ");
-    switch (payload_data[COMMAND_METHOD])
-    {
-    case START_OTA:
-        serial.println("START_OTA");
-        break;
-    case RECEIVE_METADATA:
-        serial.println("RECEIVE_METADATA");
-        break;
-    case SEND_METADATA:
-        serial.println("SEND_METADATA");
-        break;
-    case RECEIVE_PARTIAL_CRCS:
-        serial.println("RECEIVE_PARTIAL_CRCS");
-        break;
-    case SEND_MISSED_PARTIALS:
-        serial.println("SEND_MISSED_PARTIALS");
-        break;
-    case RECEIVE_BLOCK:
-        serial.println("RECEIVE_BLOCK");
-        break;
-    case CHECK_MD5:
-        serial.println("CHECK_MD5");
-        break;
-    case STOP_OTA:
-        serial.println("STOP_OTA");
-        break;
-    case ERASE_SLOT:
-        serial.println("ERASE_SLOT");
-        break;
-    case EXECUTE_SLOT:
-        serial.println("EXECUTE_SLOT");
-        break;
-    default:
-        break;
-    }
-
-    if(payload_size > PAYLOAD_SIZE_OFFSET) {
-        serial.print("Payload data: ");
-        for(int i = 0; i < payload_size - PAYLOAD_SIZE_OFFSET; i++) {
-            if(payload_data[i + COMMAND_DATA] < 0x10) serial.print(0, DEC);
-            serial.print(payload_data[i + COMMAND_DATA], HEX);
-            serial.print(" ");
-        }
-        serial.println("\n");
-    } else {
-        serial.print("\n");
-    }
-}
 
 void SoftwareUpdateService::print_metadata(unsigned char* metadata) {
     serial.println("Metadata:");
@@ -411,18 +350,26 @@ void SoftwareUpdateService::print_metadata(unsigned char* metadata) {
             break;
     }
     serial.print("\tVersion: ");
-    if(metadata[CRC_SIZE+1] < 0x10) serial.print("0");
-    serial.print(metadata[CRC_SIZE+1], HEX);
-    if(metadata[CRC_SIZE+2] < 0x10) serial.print("0");
-    serial.print(metadata[CRC_SIZE+2], HEX);
-    if(metadata[CRC_SIZE+3] < 0x10) serial.print("0");
-    serial.print(metadata[CRC_SIZE+3], HEX);
-    if(metadata[CRC_SIZE+4] < 0x10) serial.print("0");
-    serial.println(metadata[CRC_SIZE+4], HEX);
+    if(metadata[MD5_SIZE+1] < 0x10) serial.print("0");
+    serial.print(metadata[MD5_SIZE+1], HEX);
+    if(metadata[MD5_SIZE+2] < 0x10) serial.print("0");
+    serial.print(metadata[MD5_SIZE+2], HEX);
+    if(metadata[MD5_SIZE+3] < 0x10) serial.print("0");
+    serial.print(metadata[MD5_SIZE+3], HEX);
+    if(metadata[MD5_SIZE+4] < 0x10) serial.print("0");
+    serial.print(metadata[MD5_SIZE+4], HEX);
+    if(metadata[MD5_SIZE+5] < 0x10) serial.print("0");
+    serial.print(metadata[MD5_SIZE+5], HEX);
+    if(metadata[MD5_SIZE+6] < 0x10) serial.print("0");
+    serial.print(metadata[MD5_SIZE+6], HEX);
+    if(metadata[MD5_SIZE+7] < 0x10) serial.print("0");
+    serial.print(metadata[MD5_SIZE+7], HEX);
+    if(metadata[MD5_SIZE+8] < 0x10) serial.print("0");
+    serial.println(metadata[MD5_SIZE+8], HEX);
     serial.print("\tNumber of blocks: ");
-    serial.println(metadata[CRC_SIZE+6] << 8 | metadata[CRC_SIZE+5], DEC);
+    serial.println(metadata[MD5_SIZE+10] << 8 | metadata[MD5_SIZE+9], DEC);
     serial.print("\tMD5 CRC: ");
-    for(int i = 0; i < CRC_SIZE; i++) {
+    for(int i = 0; i < MD5_SIZE; i++) {
         if(metadata[i + 1] < 0x10) serial.print("0");
         serial.print(metadata[i + 1], HEX);
     }
@@ -480,6 +427,9 @@ void SoftwareUpdateService::throw_error(unsigned char error) {
         break;
     case SLOT_NOT_EMPTY:
         serial.println("The requested slot is not empty yet.");
+        break;
+    case UPDATE_TO_BIG:
+        serial.println("The update is too big for the memory slot.");
         break;
     default:
         break;
