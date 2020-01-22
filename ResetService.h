@@ -42,6 +42,7 @@ class ResetService: public Service
      ResetService( const unsigned long port, const unsigned long pin );
      virtual bool process( DataMessage &command, DataMessage &workingBbuffer );
      void init();
+     uint32_t getResetStatus();
      void refreshConfiguration();
      void kickExternalWatchDog();
      void kickInternalWatchDog();

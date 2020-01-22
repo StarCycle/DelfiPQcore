@@ -469,3 +469,6 @@ void ResetService::forceSoftReset()
     MAP_SysCtl_rebootDevice();
 }
 
+uint32_t ResetService::getResetStatus(){
+    return this->resetStatus;
+}
