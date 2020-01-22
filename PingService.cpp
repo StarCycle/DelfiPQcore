@@ -29,7 +29,7 @@ bool PingService::process(DataMessage &command, DataMessage &workingBuffer)
         // prepare response frame
         //workingBuffer.setDestination(command.getSource());
         //workingBuffer.setSource(interface.getAddress());
-        workingBuffer.setSize(2);
+        workingBuffer.setSize(command.getSize());
         workingBuffer.getPayload()[0] = PING_SERVICE;
 
         if (command.getPayload()[1] == SERVICE_RESPONSE_REQUEST)
