@@ -53,23 +53,23 @@ SoftwareVersionService::SoftwareVersionService(uint8_t versionString[]){
  *        false     :           Frame is not directed to this Service
  *
  */
-bool SoftwareVersionService::process(DataFrame &command, DataBus &interface, DataFrame &workingBuffer)
+bool SoftwareVersionService::process(DataMessage &command, DataMessage &workingBuffer)
 {
     if (command.getPayload()[0] == SOFTWAREVERSION_SERVICE) //Check if this frame is directed to this service
     {
         // prepare response frame
-        workingBuffer.setDestination(command.getSource());
-        workingBuffer.setSource(interface.getAddress());
+        //workingBuffer.setDestination(command.getSource());
+        //workingBuffer.setSource(interface.getAddress());
         workingBuffer.getPayload()[0] = SOFTWAREVERSION_SERVICE;
 
         if (command.getPayload()[1] == SOFTWAREVERSION_GETSOFTWAREVERSION)
         {
-            workingBuffer.setPayloadSize(2);
+            workingBuffer.setSize(2);
             serial.println("SoftwareVersionService: Software Version Request");
             // respond to ping
             workingBuffer.getPayload()[1] = SOFTWAREVERSION_ACCEPT;
             if(this->hasVersionNumber == true){
-                workingBuffer.setPayloadSize(10);
+                workingBuffer.setSize(10);
                 workingBuffer.getPayload()[1] = SOFTWAREVERSION_ACCEPT;
                 serial.println("has SW Version!");
                 serial.println("23456789");
@@ -83,19 +83,19 @@ bool SoftwareVersionService::process(DataFrame &command, DataBus &interface, Dat
                 workingBuffer.getPayload()[9] = this->versionNumber[7];
             }else{
                 serial.println("has no SW Version!");
-                workingBuffer.setPayloadSize(2);
+                workingBuffer.setSize(2);
                 workingBuffer.getPayload()[1] = SOFTWAREVERSION_ERROR;
             }
         }
         else
         {
             // unknown request
-            workingBuffer.setPayloadSize(2);
+            workingBuffer.setSize(2);
             workingBuffer.getPayload()[1] = SOFTWAREVERSION_ERROR;
         }
 
         // send response
-        interface.transmit(workingBuffer);
+        //interface.transmit(workingBuffer);
         // command processed
         return true;
     }
