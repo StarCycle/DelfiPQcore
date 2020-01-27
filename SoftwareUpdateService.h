@@ -11,6 +11,7 @@
 #include "Service.h"
 #include "DSerial.h"
 #include "MB85RS.h"
+#include "DataMessage.h"
 
 extern "C" {
     #include "md5.h"
@@ -142,7 +143,7 @@ class SoftwareUpdateService: public Service
 {
  public:
      SoftwareUpdateService(MB85RS &fram_in);
-     virtual bool process( DataFrame &command, DataBus &interface, DataFrame &workingBuffer );
+     virtual bool process( DataMessage &command, DataMessage &workingBuffer );
  private:
      void start_OTA(unsigned char slot_number);
 

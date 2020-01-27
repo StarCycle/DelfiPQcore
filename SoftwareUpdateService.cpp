@@ -28,12 +28,12 @@ SoftwareUpdateService::SoftwareUpdateService(MB85RS &fram_in) {
     fram = &fram_in;
 }
 
-bool SoftwareUpdateService::process(DataFrame &command, DataBus &interface, DataFrame &workingBuffer) {
+bool SoftwareUpdateService::process(DataMessage &command, DataMessage &workingBuffer) {
     if (command.getPayload()[COMMAND_SERVICE] == SOFTWAREUPDATE_SERVICE) {
         // prepare response frame
-        workingBuffer.setDestination(command.getSource());
-        workingBuffer.setSource(interface.getAddress());
-        workingBuffer.setPayloadSize(PAYLOAD_SIZE_OFFSET);
+//        workingBuffer.setDestination(command.getSource());
+//        workingBuffer.setSource(interface.getAddress());
+        workingBuffer.setSize(PAYLOAD_SIZE_OFFSET);
         workingBuffer.getPayload()[COMMAND_SERVICE] = SOFTWAREUPDATE_SERVICE;
         workingBuffer.getPayload()[COMMAND_RESPONSE] = COMMAND_REPLY;
         workingBuffer.getPayload()[COMMAND_METHOD] = command.getPayload()[COMMAND_METHOD];
@@ -45,7 +45,7 @@ bool SoftwareUpdateService::process(DataFrame &command, DataBus &interface, Data
 
         switch (command.getPayload()[COMMAND_METHOD]) {
         case START_OTA:
-            if(command.getPayloadSize() == PAYLOAD_SIZE_OFFSET + 1) {
+            if(command.getSize() == PAYLOAD_SIZE_OFFSET + 1) {
                 if(command.getPayload()[COMMAND_DATA] == 1 || command.getPayload()[COMMAND_DATA] == 2) {
                     start_OTA(command.getPayload()[COMMAND_DATA] - 1);
                     if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) serial.println("\nOTA started!");
@@ -55,7 +55,7 @@ bool SoftwareUpdateService::process(DataFrame &command, DataBus &interface, Data
             break;
 
         case RECEIVE_METADATA:
-            if(command.getPayloadSize() == METADATA_SIZE - 1 + PAYLOAD_SIZE_OFFSET) {
+            if(command.getSize() == METADATA_SIZE - 1 + PAYLOAD_SIZE_OFFSET) {
                 receive_metadata(&(command.getPayload()[COMMAND_DATA]));
                 if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) serial.println("\nMetadata received!");
 
@@ -63,7 +63,7 @@ bool SoftwareUpdateService::process(DataFrame &command, DataBus &interface, Data
             break;
 
         case SEND_METADATA:
-            if(command.getPayloadSize() == PAYLOAD_SIZE_OFFSET + 1) {
+            if(command.getSize() == PAYLOAD_SIZE_OFFSET + 1) {
                 if(command.getPayload()[COMMAND_DATA] == 1 || command.getPayload()[COMMAND_DATA] == 2) {
                     send_metadata(command.getPayload()[COMMAND_DATA] - 1);
                     if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) {
@@ -75,21 +75,21 @@ bool SoftwareUpdateService::process(DataFrame &command, DataBus &interface, Data
             break;
 
         case RECEIVE_PARTIAL_CRCS:
-            if(command.getPayloadSize() <= BLOCK_SIZE + PAYLOAD_SIZE_OFFSET) {
-                receive_partial_crcs(&(command.getPayload()[COMMAND_DATA]), command.getPayloadSize() - PAYLOAD_SIZE_OFFSET);
+            if(command.getSize() <= BLOCK_SIZE + PAYLOAD_SIZE_OFFSET) {
+                receive_partial_crcs(&(command.getPayload()[COMMAND_DATA]), command.getSize() - PAYLOAD_SIZE_OFFSET);
                 if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) serial.println("\nPartial crc block received!");
             } else throw_error(PARAMETER_MISMATCH);
             break;
 
         case RECEIVE_BLOCK:
-            if(command.getPayloadSize() <= BLOCK_SIZE + 2 + PAYLOAD_SIZE_OFFSET) {
+            if(command.getSize() <= BLOCK_SIZE + 2 + PAYLOAD_SIZE_OFFSET) {
                 receive_block(&(command.getPayload()[COMMAND_DATA + 2]), command.getPayload()[COMMAND_DATA] | (command.getPayload()[COMMAND_DATA + 1] << 8));
                 if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) serial.println("\nBlock received!");
             } else throw_error(PARAMETER_MISMATCH);
             break;
 
         case CHECK_MD5:
-            if(command.getPayloadSize() == PAYLOAD_SIZE_OFFSET + 1) {
+            if(command.getSize() == PAYLOAD_SIZE_OFFSET + 1) {
                 if(command.getPayload()[COMMAND_DATA] == 1 || command.getPayload()[COMMAND_DATA] == 2) {
                     check_md5(command.getPayload()[COMMAND_DATA] - 1);
                     if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) serial.println("\nMD5 is correct!");
@@ -98,14 +98,14 @@ bool SoftwareUpdateService::process(DataFrame &command, DataBus &interface, Data
             break;
 
         case STOP_OTA:
-            if(command.getPayloadSize() == PAYLOAD_SIZE_OFFSET) {
+            if(command.getSize() == PAYLOAD_SIZE_OFFSET) {
                 stop_OTA();
                 if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) serial.println("\nOTA is stopped!");
             } else throw_error(PARAMETER_MISMATCH);
             break;
 
         case ERASE_SLOT:
-            if(command.getPayloadSize() == PAYLOAD_SIZE_OFFSET + 1) {
+            if(command.getSize() == PAYLOAD_SIZE_OFFSET + 1) {
                 if((state_flags & ERASE_FLAG) == 0) {
                     if(command.getPayload()[COMMAND_DATA] == 1 || command.getPayload()[COMMAND_DATA] == 2) {
                         slot_erase = command.getPayload()[COMMAND_DATA];
@@ -121,9 +121,9 @@ bool SoftwareUpdateService::process(DataFrame &command, DataBus &interface, Data
             } else throw_error(PARAMETER_MISMATCH);
             break;
         case SET_BOOT_SLOT:
-            if(command.getPayloadSize() == PAYLOAD_SIZE_OFFSET + 1) {
-                if(command.getPayload()[COMMAND_DATA] == 1 || command.getPayload()[COMMAND_DATA] == 2) {
-                    set_boot_slot(command.getPayload()[COMMAND_DATA] - 1, false);
+            if(command.getSize() == PAYLOAD_SIZE_OFFSET + 1) {
+                if(command.getPayload()[COMMAND_DATA] >= 0 || command.getPayload()[COMMAND_DATA] <= 2) {
+                    set_boot_slot(command.getPayload()[COMMAND_DATA], false);
                     if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) serial.println("\nSlot code executed successfully!");
 
                 } else throw_error(SLOT_OUT_OF_RANGE);
@@ -136,8 +136,8 @@ bool SoftwareUpdateService::process(DataFrame &command, DataBus &interface, Data
             break;
         }
 
-        workingBuffer.setPayloadSize(payload_size);
-        interface.transmit(workingBuffer);
+        workingBuffer.setSize(payload_size);
+        //interface.transmit(workingBuffer);
         // command processed
         return true;
     } else {
@@ -217,7 +217,7 @@ void SoftwareUpdateService::receive_block(unsigned char* data_block, uint16_t bl
                 if(received_par_crcs < num_update_blocks * BLOCK_SIZE) {
                     if(block_offset <= num_update_blocks) {
                         if(check_partial_crc(data_block, block_offset)) {
-                            serial.print(block_offset, DEC);
+
                             unsigned int sector =  1 << (((block_offset * BLOCK_SIZE + update_slot * SLOT_SIZE)) / SECTOR_SIZE);
                             if(!MAP_FlashCtl_unprotectSector(FLASH_MAIN_MEMORY_SPACE_BANK1, sector)) return throw_error(NO_SLOT_ACCESS);
                             if(!MAP_FlashCtl_programMemory(data_block, (void*)(BANK1_ADDRESS + update_slot * SLOT_SIZE + block_offset * BLOCK_SIZE), BLOCK_SIZE)) return throw_error(NO_SLOT_ACCESS);
@@ -323,8 +323,10 @@ void SoftwareUpdateService::set_boot_slot(unsigned char slot, bool permenant) {
     if(payload_data[COMMAND_RESPONSE] == COMMAND_ERROR) return throw_error(payload_data[COMMAND_DATA]);
 
     //void (*slot_function)(void) = (void (*)())(BANK1_ADDRESS + slot * SLOT_SIZE + 0x312c);
-    uint8_t boot2new = 1;
+    uint8_t boot2new = slot;
+    uint8_t confirmJump = 1;
     fram->write(0x7FF0, &boot2new, 1);
+    fram->write(0x7FF1, &confirmJump, 1);
     MAP_SysCtl_rebootDevice();
     //slot_function();
 }
