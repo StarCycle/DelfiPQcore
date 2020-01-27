@@ -322,13 +322,17 @@ void SoftwareUpdateService::set_boot_slot(unsigned char slot, bool permenant) {
     check_md5(slot);
     if(payload_data[COMMAND_RESPONSE] == COMMAND_ERROR) return throw_error(payload_data[COMMAND_DATA]);
 
-    //void (*slot_function)(void) = (void (*)())(BANK1_ADDRESS + slot * SLOT_SIZE + 0x312c);
-    uint8_t boot2new = slot;
-    uint8_t confirmJump = 1;
-    fram->write(0x7FF0, &boot2new, 1);
-    fram->write(0x7FF1, &confirmJump, 1);
-    MAP_SysCtl_rebootDevice();
-    //slot_function();
+    unsigned char state;
+    if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
+    fram->read((METADATA_SIZE + PAR_CRC_SIZE) * slot, &state, 1);
+
+    if(state == FULL) {
+        uint8_t boot2new = slot;
+        uint8_t confirmJump = 1;
+        fram->write(0x7FF0, &boot2new, 1);
+        fram->write(0x7FF1, &confirmJump, 1);
+        MAP_SysCtl_rebootDevice();
+    } else return throw_error(SLOT_NOT_PROGRAMMED);
 }
 
 
@@ -432,6 +436,9 @@ void SoftwareUpdateService::throw_error(unsigned char error) {
         break;
     case UPDATE_TO_BIG:
         serial.println("The update is too big for the memory slot.");
+        break;
+    case SLOT_NOT_PROGRAMMED:
+        serial.println("The requested slot is not (completely) programmed.");
         break;
     default:
         break;

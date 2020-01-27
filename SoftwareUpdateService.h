@@ -94,7 +94,8 @@ enum error_codes{
     MD5_MISMATCH,
     OFFSET_OUT_OF_RANGE,
     SLOT_NOT_EMPTY,
-    UPDATE_TO_BIG
+    UPDATE_TO_BIG,
+    SLOT_NOT_PROGRAMMED
 };
 
 enum metadata_offset {
