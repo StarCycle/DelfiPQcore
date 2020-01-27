@@ -23,6 +23,7 @@ class CommandHandler: public Task
      Service** services;
      int servicesCount;
      Frame_Type rxBuffer, txBuffer;
+     DataMessage rxMsg, txMsg;
      void (*onValidCmd)( void );
 
      virtual void run()
@@ -30,6 +31,7 @@ class CommandHandler: public Task
          //Prepare Frame to be send back:
          txBuffer.setDestination(rxBuffer.getSource());
          txBuffer.setSource(bus.getAddress());
+         rxMsg.setSize(rxBuffer.getPayloadSize());
 
          if (rxBuffer.getPayloadSize() > 1)
          {
@@ -37,9 +39,12 @@ class CommandHandler: public Task
 
              for (int i = 0; i < servicesCount; i++)
              {
-                 if (services[i]->process(rxBuffer, bus, txBuffer)) // Does any of the Services Handle this command?
+                 if (services[i]->process(rxMsg, txMsg)) // Does any of the Services Handle this command?
                  {
                      // stop the loop if a service is found
+                     txBuffer.setPayloadSize(txMsg.getSize());
+                     bus.transmit(txBuffer);
+                     services[i]->postFunc();
                      found = true;
                      break;
                  }
@@ -84,6 +89,8 @@ class CommandHandler: public Task
          Task(), bus(interface), services(servArray), servicesCount(count)
      {
          onValidCmd = 0;
+         rxMsg.setPointer(rxBuffer.getPayload());
+         txMsg.setPointer(txBuffer.getPayload());
      };
 
      void received( DataFrame &newFrame )

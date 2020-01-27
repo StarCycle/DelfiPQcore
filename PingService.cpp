@@ -22,30 +22,30 @@ extern DSerial serial;
  *        false     :           Frame is not directed to this Service
  *
  */
-bool PingService::process(DataFrame &command, DataBus &interface, DataFrame &workingBuffer)
+bool PingService::process(DataMessage &command, DataMessage &workingBuffer)
 {
     if (command.getPayload()[0] == PING_SERVICE) //Check if this frame is directed to this service
     {
         // prepare response frame
-        workingBuffer.setDestination(command.getSource());
-        workingBuffer.setSource(interface.getAddress());
-        workingBuffer.setPayloadSize(2);
+        //workingBuffer.setDestination(command.getSource());
+        //workingBuffer.setSource(interface.getAddress());
+        workingBuffer.setSize(command.getSize());
         workingBuffer.getPayload()[0] = PING_SERVICE;
 
-        if (command.getPayload()[1] == PING_REQUEST)
+        if (command.getPayload()[1] == SERVICE_RESPONSE_REQUEST)
         {
             serial.println("PingService: Ping Request");
             // respond to ping
-            workingBuffer.getPayload()[1] = PING_RESPONSE;
+            workingBuffer.getPayload()[1] = SERVICE_RESPONSE_REPLY;
         }
         else
         {
             // unknown request
-            workingBuffer.getPayload()[1] = PING_ERROR;
+            workingBuffer.getPayload()[1] = SERVICE_RESPONSE_ERROR;
         }
 
         // send response
-        interface.transmit(workingBuffer);
+        //interface.transmit(workingBuffer);
         // command processed
         return true;
     }
