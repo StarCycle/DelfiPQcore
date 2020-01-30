@@ -122,22 +122,32 @@ bool SoftwareUpdateService::process(DataMessage &command, DataMessage &workingBu
             break;
         case SET_BOOT_SLOT:
             if(command.getSize() == PAYLOAD_SIZE_OFFSET + 1) {
-                if(command.getPayload()[COMMAND_DATA] >= 0 || command.getPayload()[COMMAND_DATA] <= 2) {
+                if(command.getPayload()[COMMAND_DATA] < 3) {
                     set_boot_slot(command.getPayload()[COMMAND_DATA], false);
                     if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) serial.println("\nSlot code executed successfully!");
-
                 } else throw_error(SLOT_OUT_OF_RANGE);
             } else throw_error(PARAMETER_MISMATCH);
             break;
+        case GET_NUM_MISSED_BLOCKS:
+            if(command.getSize() == PAYLOAD_SIZE_OFFSET) {
+                get_num_missed_blocks();
+                if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) {
+                    serial.print("\nNumber of missed blocks: ");
+                    serial.println(payload_data[COMMAND_DATA], DEC);
+                }
+            } else throw_error(PARAMETER_MISMATCH);
+            break;
         case GET_MISSED_BLOCKS:
-
+            if(command.getSize() == PAYLOAD_SIZE_OFFSET) {
+                get_missed_blocks();
+            } else throw_error(PARAMETER_MISMATCH);
             break;
         default:
             break;
         }
 
         workingBuffer.setSize(payload_size);
-        //interface.transmit(workingBuffer);
+
         // command processed
         return true;
     } else {
@@ -156,16 +166,21 @@ void SoftwareUpdateService::start_OTA(unsigned char slot_number) {
         fram->read((METADATA_SIZE + PAR_CRC_SIZE) * slot_number, &state, 1);
 
         if(state == EMPTY) {
-            state_flags |= UPDATE_FLAG;
-            state_flags &= ~(METADATA_FLAG | PARTIAL_CRC_FLAG);
-            received_par_crcs = 0;
-            update_slot = slot_number;
             state = PARTIAL;
             if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
             fram->write((METADATA_SIZE + PAR_CRC_SIZE) * slot_number, &state, 1);
-        } else if(state == PARTIAL && state_flags & METADATA_FLAG > 0) {
             state_flags |= UPDATE_FLAG;
+            state_flags &= ~(METADATA_FLAG | PARTIAL_CRC_FLAG | MD5_INCORRECT_FLAG);
+            received_par_crcs = 0;
             update_slot = slot_number;
+            for(int i = 0; i < [MAX_BLOCK_AMOUNT/INT_SIZE]; i++) blocks_received[i] = 0;
+            missed_pointer = 0;
+        } else if(state == PARTIAL) {
+            if((state_flags & MD5_INCORRECT_FLAG) > 0 && update_slot == slot_number) {
+                if((state_flags & METADATA_FLAG) > 0) {
+                    state_flags |= UPDATE_FLAG;
+                } else return throw_error(METADATA_NOT_RECEIVED);
+            } else return throw_error(UPDATE_NOT_CURRENT_SESSION);
         } else return throw_error(SLOT_NOT_EMPTY);
     } else return throw_error(UPDATE_ALREADY_STARTED);
 }
@@ -217,14 +232,13 @@ void SoftwareUpdateService::receive_block(unsigned char* data_block, uint16_t bl
                 if(received_par_crcs < num_update_blocks * BLOCK_SIZE) {
                     if(block_offset <= num_update_blocks) {
                         if(check_partial_crc(data_block, block_offset)) {
-
                             unsigned int sector =  1 << (((block_offset * BLOCK_SIZE + update_slot * SLOT_SIZE)) / SECTOR_SIZE);
                             if(!MAP_FlashCtl_unprotectSector(FLASH_MAIN_MEMORY_SPACE_BANK1, sector)) return throw_error(NO_SLOT_ACCESS);
                             if(!MAP_FlashCtl_programMemory(data_block, (void*)(BANK1_ADDRESS + update_slot * SLOT_SIZE + block_offset * BLOCK_SIZE), BLOCK_SIZE)) return throw_error(NO_SLOT_ACCESS);
                             if(!MAP_FlashCtl_protectSector(FLASH_MAIN_MEMORY_SPACE_BANK1, sector)) return throw_error(NO_SLOT_ACCESS);
-                            //serial.println("CRC matches for this block!");
+                            blocks_received[block_offset / INT_SIZE] |= 1 << (block_offset % INT_SIZE);
                         } else {
-                            if(payload_data[COMMAND_RESPONSE] == COMMAND_ERROR) return;
+                            blocks_received[block_offset / INT_SIZE] &= ~(1 << (block_offset % INT_SIZE));
                             return throw_error(CRC_MISMATCH);
                         }
                     } else return throw_error(OFFSET_OUT_OF_RANGE);
@@ -279,6 +293,8 @@ void SoftwareUpdateService::check_md5(unsigned char slot_number) {
         }
     }
 
+    if(equal) state_flags &= ~MD5_INCORRECT_FLAG;
+    else state_flags |= MD5_INCORRECT_FLAG;
     payload_data[COMMAND_DATA] = equal;
 }
 
@@ -287,14 +303,12 @@ void SoftwareUpdateService::stop_OTA() {
 
     if((state_flags & UPDATE_FLAG) > 0) {
         state_flags &= ~UPDATE_FLAG;
-        unsigned int temp_slot = update_slot;
-        update_slot = 0;
-        check_md5(temp_slot);
+        check_md5(update_slot);
         if(payload_data[COMMAND_RESPONSE] == COMMAND_ERROR) return throw_error(payload_data[COMMAND_DATA]);
         if(payload_data[COMMAND_DATA]) {
            unsigned char temp = FULL;
            if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
-           fram->write((METADATA_SIZE + PAR_CRC_SIZE) * temp_slot, &temp, 1);
+           fram->write((METADATA_SIZE + PAR_CRC_SIZE) * update_slot, &temp, 1);
         } else return throw_error(MD5_MISMATCH);
     } else return throw_error(UPDATE_NOT_STARTED);
 }
@@ -335,6 +349,87 @@ void SoftwareUpdateService::set_boot_slot(unsigned char slot, bool permenant) {
     } else return throw_error(SLOT_NOT_PROGRAMMED);
 }
 
+void SoftwareUpdateService::get_num_missed_blocks() {
+    uint16_t* count = (uint16_t*)(&payload_data[COMMAND_DATA]);
+    *count = 0;
+    payload_size = PAYLOAD_SIZE_OFFSET + sizeof(uint16_t);
+
+
+    unsigned char state;
+    if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
+    fram->read((METADATA_SIZE + PAR_CRC_SIZE) * update_slot, &state, 1);
+
+    switch(state) {
+        case FULL:
+            serial.println("The requested slot is already fully programmed.");
+            return;
+        case EMPTY:
+            return throw_error(UPDATE_NOT_STARTED);
+        default:
+            break;
+    }
+
+    if((state_flags & UPDATE_FLAG) == 0) {
+        int size = (num_update_blocks / INT_SIZE) + (((num_update_blocks % INT_SIZE) > 0) ? 1 : 0);
+        for(int i = 0; i < size; i++) {
+            if(blocks_received[i] < 0xFFFFFFFF) {
+                for(int j = 0; j < INT_SIZE; j++) {
+                    if((i * INT_SIZE + j) == num_update_blocks) {
+                        //memcpy(&payload_data[COMMAND_DATA], &count, sizeof(uint16_t));
+                        return;
+                    }
+                    if((blocks_received[i] & (1 << j)) == 0) (*count)++;
+                }
+            }
+        }
+        //memcpy(&payload_data[COMMAND_DATA], &count, sizeof(uint16_t));
+    } else return throw_error(UPDATE_ALREADY_STARTED);
+}
+
+void SoftwareUpdateService::get_missed_blocks() {
+    unsigned char state;
+    if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
+    fram->read((METADATA_SIZE + PAR_CRC_SIZE) * update_slot, &state, 1);
+
+    switch(state) {
+        case FULL:
+            serial.println("The requested slot is already fully programmed.");
+            return;
+        case EMPTY:
+            return throw_error(UPDATE_NOT_STARTED);
+        default:
+            break;
+    }
+
+    if((state_flags & UPDATE_FLAG) == 0) {
+        while(missed_pointer < num_update_blocks) {
+            int index = missed_pointer / INT_SIZE;
+
+            if(blocks_received[index] < 0xFFFFFFFF) {
+                do {
+                    if(missed_pointer == num_update_blocks) {
+                        missed_pointer = 0;
+                        return;
+                    }
+                    if((payload_size - PAYLOAD_SIZE_OFFSET) == BLOCK_SIZE) return;
+
+                    if((blocks_received[index] & (1 << missed_pointer % INT_SIZE)) == 0) {
+                        memcpy(&payload_data[COMMAND_DATA + (payload_size - PAYLOAD_SIZE_OFFSET)], &missed_pointer, sizeof(uint16_t));
+                        payload_size += 2;
+                        serial.print("Block ");
+                        serial.print(missed_pointer, DEC);
+                        serial.println(" has been missed.");
+                    }
+
+                    missed_pointer++;
+                }
+                while((missed_pointer % INT_SIZE) != 0);
+            } else missed_pointer += INT_SIZE;
+        }
+
+        missed_pointer = 0;
+    } else return throw_error(UPDATE_ALREADY_STARTED);
+}
 
 
 void SoftwareUpdateService::print_metadata(unsigned char* metadata) {
@@ -408,7 +503,7 @@ void SoftwareUpdateService::throw_error(unsigned char error) {
         serial.println("The update has not started yet.");
         break;
     case UPDATE_ALREADY_STARTED:
-        serial.println("The update has already been started.");
+        serial.println("The update is still in progress.");
         break;
     case METADATA_ALREADY_RECEIVED:
         serial.println("The metadata has already been received.");
@@ -439,7 +534,8 @@ void SoftwareUpdateService::throw_error(unsigned char error) {
         break;
     case SLOT_NOT_PROGRAMMED:
         serial.println("The requested slot is not (completely) programmed.");
-        break;
+    case UPDATE_NOT_CURRENT_SESSION:
+        serial.println("The update cannot start, because the update is not from the current session. Erase the slot first and retry.");
     default:
         break;
     }

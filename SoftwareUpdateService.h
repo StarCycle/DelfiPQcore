@@ -2,7 +2,7 @@
  * SoftwareUpdateService.h
  *
  *  Created on: 27 Jul 2019
- *      Author: stefanosperett
+ *      Author: Jasper Haenen
  */
 
 #ifndef SOFTWAREUPDATESERVICE_H_
@@ -37,6 +37,8 @@ extern "C" {
 
 #define PAYLOAD_SIZE_OFFSET     3
 
+#define INT_SIZE                (sizeof(unsigned int) * 8)
+
 enum slot_status{
     EMPTY = 0x00,
     PARTIAL = 0x01,
@@ -54,6 +56,7 @@ enum commands{
     STOP_OTA,
     ERASE_SLOT,
     SET_BOOT_SLOT,
+    GET_NUM_MISSED_BLOCKS,
     GET_MISSED_BLOCKS
 };
 
@@ -74,27 +77,29 @@ enum flags {
     ERASE_FLAG = 0x01,
     UPDATE_FLAG = 0x02,
     METADATA_FLAG = 0x04,
-    PARTIAL_CRC_FLAG = 0x08
+    PARTIAL_CRC_FLAG = 0x08,
+    MD5_INCORRECT_FLAG = 0x10
 };
 
 enum error_codes{
     NO_ERROR,
     NO_FRAM_ACCESS,
     NO_SLOT_ACCESS,
-    SLOT_OUT_OF_RANGE,
     MEMORY_FULL,
     PARAMETER_MISMATCH,
     UPDATE_NOT_STARTED,
     UPDATE_ALREADY_STARTED,
+    UPDATE_NOT_CURRENT_SESSION,
+    UPDATE_TO_BIG,
     METADATA_ALREADY_RECEIVED,
     METADATA_NOT_RECEIVED,
     PARTIAL_ALREADY_RECEIVED,
     PARTIAL_NOT_RECEIVED,
     CRC_MISMATCH,
     MD5_MISMATCH,
+    SLOT_OUT_OF_RANGE,
     OFFSET_OUT_OF_RANGE,
     SLOT_NOT_EMPTY,
-    UPDATE_TO_BIG,
     SLOT_NOT_PROGRAMMED
 };
 
@@ -163,6 +168,7 @@ class SoftwareUpdateService: public Service
 
      void set_boot_slot(unsigned char slot, bool always);
 
+     void get_num_missed_blocks();
      void get_missed_blocks();
 
      void print_metadata(unsigned char* metadata);
@@ -177,7 +183,8 @@ class SoftwareUpdateService: public Service
      unsigned char* payload_data;
      unsigned char payload_size;
 
-     unsigned int blocks_received[MAX_BLOCK_AMOUNT/sizeof(unsigned int)] = { 0 };
+     unsigned int blocks_received[MAX_BLOCK_AMOUNT/INT_SIZE] = { 0 };
+     unsigned int missed_pointer = 0;
 
      MB85RS* fram;
 };
