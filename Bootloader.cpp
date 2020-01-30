@@ -28,6 +28,21 @@ void Bootloader::JumpSlot(){
     uint32_t* pcPoint = (uint32_t*) 0x20000000;
     serial.print("BOOTLOADER: PC: ");
     serial.println(*pcPoint, HEX);
+    serial.print("BOOTLOADER: Slot: ");
+    switch (*pcPoint >> 16) {
+        case 0:
+            serial.println('0');
+            break;
+        case 2:
+            serial.println('1');
+            break;
+        case 3:
+            serial.println('2');
+            break;
+        default:
+            serial.println('unknown');
+            break;
+    }
 
     if(jumpSlot == 1){
         jumpSlot = 0;
