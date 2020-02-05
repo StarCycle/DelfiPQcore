@@ -36,6 +36,8 @@ class ResetService: public Service
 //     uint32_t csResetStat;
 
      uint32_t resetStatus = 0;
+     uint32_t csStatus = 0;
+     uint32_t csFaults = 0;
 
 
  public:
@@ -44,6 +46,7 @@ class ResetService: public Service
      void init();
      uint32_t getResetStatus();
      void readResetStatus();
+     void readCSStatus();
      void refreshConfiguration();
      void kickExternalWatchDog();
      void kickInternalWatchDog();
