@@ -43,6 +43,7 @@ class ResetService: public Service
      virtual bool process( DataMessage &command, DataMessage &workingBbuffer );
      void init();
      uint32_t getResetStatus();
+     void readResetStatus();
      void refreshConfiguration();
      void kickExternalWatchDog();
      void kickInternalWatchDog();

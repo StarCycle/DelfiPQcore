@@ -90,7 +90,12 @@ void ResetService::init()
     // start the timer
     MAP_WDT_A_startTimer();
 
+    //get ResetStatus
+    readResetStatus();
 
+}
+
+void ResetService::readResetStatus(){
 
     //Get and Clear ResetRegisters
     serial.println("========= ResetService Reboot Cause =========");
