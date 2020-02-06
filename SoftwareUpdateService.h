@@ -32,8 +32,12 @@ extern "C" {
 #define MAX_BLOCK_AMOUNT        (SLOT_SIZE / BLOCK_SIZE)
 
 #define BANK1_ADDRESS           0x20000
+#define CURRENT_SLOT_ADDRESS    0x20000000;
 
 #define ACKNOWLEDGE             13
+
+#define BOOT_PERMANENTLY   0x80
+#define FRAM_TARGET_SLOT   0x7FF0
 
 #define PAYLOAD_SIZE_OFFSET     3
 
@@ -100,7 +104,8 @@ enum error_codes{
     SLOT_OUT_OF_RANGE,
     OFFSET_OUT_OF_RANGE,
     SLOT_NOT_EMPTY,
-    SLOT_NOT_PROGRAMMED
+    SLOT_NOT_PROGRAMMED,
+    SELF_ACTION
 };
 
 enum metadata_offset {
@@ -166,7 +171,7 @@ class SoftwareUpdateService: public Service
 
      void erase_slot(unsigned char slot);
 
-     void set_boot_slot(unsigned char slot, bool always);
+     void set_boot_slot(unsigned char slot, bool permanent);
 
      void get_num_missed_blocks();
      void get_missed_blocks();
