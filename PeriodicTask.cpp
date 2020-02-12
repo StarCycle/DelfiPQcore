@@ -5,7 +5,7 @@
  *      Author: stefanosperett
  */
 
-#include <PeriodicTask.h>
+#include "PeriodicTask.h"
 
 PeriodicTask *instanceTimerTask;
 
