@@ -12,6 +12,7 @@
 #include "msp.h"
 
 #define FCLOCK 48000000
+#define SCLOCK 32768
 
 class DelfiPQcore
 {
