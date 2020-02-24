@@ -26,22 +26,37 @@ void Bootloader::JumpSlot(){
 
     uint32_t* pcPoint = (uint32_t*)0x20000000;
 
+    //Program Counter is either at: (0x000000XX, 0x000200XX, 0x000300XX)
+    //meaning you can detect the current slot by looking at the 17th bit
     uint8_t current_slot = (uint8_t)(*pcPoint >> 16);
-    if(current_slot != 0) {
-        current_slot--;
+    switch(current_slot){
+        case 0x00:
+            current_slot = 0;
+            break;
+        case 0x02:
+            current_slot = 1;
+            break;
+        case 0x03:
+            current_slot = 2;
+            break;
     }
-    *pcPoint = current_slot;
 
-    serial.print("BOOTLOADER: Current slot: ");
+    serial.println("================= BOOTLOADER ================");
+    serial.print("= Current slot: ");
     serial.println(current_slot, DEC);
-    serial.print("BOOTLOADER: Target slot: ");
-    serial.println((target_slot & 0x7F), DEC);
-    serial.print("BOOTLOADER: Permanently: ");
-    serial.println(((target_slot & BOOT_PERMANENTLY) > 0) ? "YES" : "NO");
 
-    if(current_slot != (target_slot & 0x7F)) {
-        serial.print("BOOTLOADER: Jumping to slot:");
+    if(current_slot == 0 && (target_slot & 0x7F) != 0){ //if we are in slot0 (default slot) we might have to jump
+        serial.print("= Target slot: ");
         serial.println((target_slot & 0x7F), DEC);
+        serial.print("= Permanent Jump: ");
+        serial.println(((target_slot & BOOT_PERMANENTLY) > 0) ? "YES" : "NO"); //permanent jump flag is set (not a one time jump)
+
+        if((target_slot & BOOT_PERMANENTLY) == 0) {
+            serial.println("+ Preparing One-time jump");
+            this->fram->write(FRAM_TARGET_SLOT, &current_slot, 1); //reset target to slot0
+        } else {
+            serial.println("+ Preparing Permanent jump");
+        }
 
         MAP_Interrupt_disableMaster();
         MAP_WDT_A_holdTimer();
@@ -58,24 +73,21 @@ void Bootloader::JumpSlot(){
                 resetPtr = (uint32_t*)(0x30000 + 4);
                 break;
             default:
-                serial.println("BOOTLOADER: Error, target slot out of reach!");
-                target_slot = BOOT_PERMANENTLY;
+                serial.println("+ BOOTLOADER - Error: target slot not valid!");
+                target_slot = BOOT_PERMANENTLY; //set target to 0 and reboot
                 this->fram->write(FRAM_TARGET_SLOT, &target_slot, 1);
                 MAP_SysCtl_rebootDevice();
                 break;
         }
 
+
+        serial.println("=============================================");
         void (*slotPtr)(void) = (void (*)())(*resetPtr);
-        slotPtr();
+        slotPtr();  //This is the jump!
         while(1);
-    } else {
-        if((target_slot & BOOT_PERMANENTLY) == 0) {
-            serial.println("BOOTLOADER: Only boot once in this slot. Resetting target to slot 0.");
-            target_slot = BOOT_PERMANENTLY;
-            this->fram->write(FRAM_TARGET_SLOT, &target_slot, 1);
-        } else {
-            serial.println("BOOTLOADER: Permanently boot from this slot.");
-        }
+
+    }else{
+        serial.println("=============================================");
     }
 }
 
