@@ -24,7 +24,7 @@ void DelfiPQcore::initMCU( void )
 
     // Starting HFXT in non-bypass mode with a timeout. Before we start
     // we have to change VCORE to 1 to support the 48MHz frequency
-    MAP_CS_setExternalClockSourceFrequency(0, FCLOCK);
+    MAP_CS_setExternalClockSourceFrequency(SCLOCK, FCLOCK);
 
     MAP_PCM_setCoreVoltageLevel(PCM_VCORE1);
     MAP_FlashCtl_setWaitState(FLASH_BANK0, 2);

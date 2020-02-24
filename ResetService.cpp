@@ -174,117 +174,124 @@ void ResetService::readResetStatus(){
 }
 
 void ResetService::readCSStatus(){
+    //Get and Clear Clock Status
+    // CLOCK ENABLED/DISABLED STATUS:
+//    serial.println("========= ResetService Clock Status =========");
+//    this->csStatus  = CS->STAT;
+//
+//    serial.print("CS STATUS: ");
+//    serial.print(csStatus, HEX);
+//    serial.println("");
+//
+//    if( CheckResetSRC(csStatus, CS_STAT_DCO_ON)){
+//        serial.println("- DCO Active");
+//    }else{
+//        serial.println("- DCO Inactive");
+//    }
+//    if( CheckResetSRC(csStatus, CS_STAT_DCOBIAS_ON)){
+//        serial.println("- DCO Bias Active");
+//    }else{
+//        serial.println("- DCO Bias Inactive");
+//    }
+//    if( CheckResetSRC(csStatus, CS_STAT_HFXT_ON)){
+//        serial.println("- HFXT Active");
+//    }else{
+//        serial.println("- HFXT Inactive");
+//    }
+//    if( CheckResetSRC(csStatus, CS_STAT_MODOSC_ON)){
+//        serial.println("- MODOSC Active");
+//    }else{
+//        serial.println("- MODOSC Inactive");
+//    }
+//    if( CheckResetSRC(csStatus, CS_STAT_VLO_ON)){
+//        serial.println("- VLO Active");
+//    }else{
+//        serial.println("- VLO Inactive");
+//    }
+//    if( CheckResetSRC(csStatus, CS_STAT_LFXT_ON) ){
+//        serial.println("- LFXT Active");
+//    }else{
+//        serial.println("- LFXT Inactive");
+//    }
+//    if( CheckResetSRC(csStatus, CS_STAT_REFO_ON) ){
+//        serial.println("- REFO Active");
+//    }else{
+//        serial.println("- REFO Inactive");
+//    }
+//    if( CheckResetSRC(csStatus, CS_STAT_ACLK_ON) ){
+//            serial.println("- ACLK Active");
+//    }else{
+//        serial.println("- ACLK Inactive");
+//    }
+//    if( CheckResetSRC(csStatus, CS_STAT_MCLK_ON) ){
+//            serial.println("- MCLK Active");
+//    }else{
+//        serial.println("- MCLK Inactive");
+//    }
+//    if( CheckResetSRC(csStatus, CS_STAT_HSMCLK_ON) ){
+//            serial.println("- HSMCLK Active");
+//    }else{
+//        serial.println("- HSMCLK Inactive");
+//    }
+//    if( CheckResetSRC(csStatus, CS_STAT_SMCLK_ON) ){
+//            serial.println("- SMCLK Active");
+//    }else{
+//        serial.println("- SMCLK Inactive");
+//    }
+//    if( CheckResetSRC(csStatus, CS_STAT_MODCLK_ON) ){
+//            serial.println("- MODCLK Active");
+//    }else{
+//        serial.println("- MODCLK Inactive");
+//    }
+//    if( CheckResetSRC(csStatus, CS_STAT_VLOCLK_ON) ){
+//            serial.println("- VLOCLK Active");
+//    }else{
+//        serial.println("- VLOCLK Inactive");
+//    }
+//    if( CheckResetSRC(csStatus, CS_STAT_LFXTCLK_ON) ){
+//            serial.println("- LFXTCLK Active");
+//    }else{
+//        serial.println("- LFXTCLK Inactive");
+//    }
+//    if( CheckResetSRC(csStatus, CS_STAT_REFOCLK_ON) ){
+//            serial.println("- REFOCLK Active");
+//    }else{
+//        serial.println("- REFOCLK Inactive");
+//    }
+//    if( CheckResetSRC(csStatus, CS_STAT_ACLK_READY) ){
+//            serial.println("- ACLK Ready");
+//    }else{
+//        serial.println("- ACLK NOT Ready");
+//    }
+//    if( CheckResetSRC(csStatus, CS_STAT_MCLK_READY) ){
+//            serial.println("- MCLK Ready");
+//    }else{
+//        serial.println("- MCLK NOT Ready");
+//    }
+//    if( CheckResetSRC(csStatus, CS_STAT_HSMCLK_READY) ){
+//            serial.println("- HSMCLK Ready");
+//    }else{
+//        serial.println("- HSMCLK NOT Ready");
+//    }
+//    if( CheckResetSRC(csStatus, CS_STAT_SMCLK_READY) ){
+//            serial.println("- SMCLK Ready");
+//    }else{
+//        serial.println("- SMCLK NOT Ready");
+//    }
+//    if( CheckResetSRC(csStatus, CS_STAT_BCLK_READY) ){
+//        serial.println("- BCLK Ready");
+//    }else{
+//        serial.println("- BCLK NOT Ready");
+//    }
 
-    //Get and Clear ResetRegisters
-    serial.println("========= ResetService Clock Status =========");
-    this->csStatus  = CS->STAT;
+    CS->CLRIFG |= CS_CLRIFG_CLR_LFXTIFG;
+    CS->CLRIFG |= CS_CLRIFG_CLR_HFXTIFG;
+    CS->CLRIFG |= CS_CLRIFG_CLR_DCOR_OPNIFG;
+    CS->CLRIFG |= CS_CLRIFG_CLR_FCNTLFIFG;
+    CS->CLRIFG |= CS_CLRIFG_CLR_FCNTHFIFG;
+    CS->CLRIFG |= CS_SETIFG_SET_LFXTIFG;
 
-    serial.print("CS STATUS: ");
-    serial.print(csStatus, HEX);
-    serial.println("");
-
-    if( CheckResetSRC(csStatus, CS_STAT_DCO_ON)){
-        serial.println("- DCO Active");
-    }else{
-        serial.println("- DCO Inactive");
-    }
-    if( CheckResetSRC(csStatus, CS_STAT_DCOBIAS_ON)){
-        serial.println("- DCO Bias Active");
-    }else{
-        serial.println("- DCO Bias Inactive");
-    }
-    if( CheckResetSRC(csStatus, CS_STAT_HFXT_ON)){
-        serial.println("- HFXT Active");
-    }else{
-        serial.println("- HFXT Inactive");
-    }
-    if( CheckResetSRC(csStatus, CS_STAT_MODOSC_ON)){
-        serial.println("- MODOSC Active");
-    }else{
-        serial.println("- MODOSC Inactive");
-    }
-    if( CheckResetSRC(csStatus, CS_STAT_VLO_ON)){
-        serial.println("- VLO Active");
-    }else{
-        serial.println("- VLO Inactive");
-    }
-    if( CheckResetSRC(csStatus, CS_STAT_LFXT_ON) ){
-        serial.println("- LFXT Active");
-    }else{
-        serial.println("- LFXT Inactive");
-    }
-    if( CheckResetSRC(csStatus, CS_STAT_REFO_ON) ){
-        serial.println("- REFO Active");
-    }else{
-        serial.println("- REFO Inactive");
-    }
-    if( CheckResetSRC(csStatus, CS_STAT_ACLK_ON) ){
-            serial.println("- ACLK Active");
-    }else{
-        serial.println("- ACLK Inactive");
-    }
-    if( CheckResetSRC(csStatus, CS_STAT_MCLK_ON) ){
-            serial.println("- MCLK Active");
-    }else{
-        serial.println("- MCLK Inactive");
-    }
-    if( CheckResetSRC(csStatus, CS_STAT_HSMCLK_ON) ){
-            serial.println("- HSMCLK Active");
-    }else{
-        serial.println("- HSMCLK Inactive");
-    }
-    if( CheckResetSRC(csStatus, CS_STAT_SMCLK_ON) ){
-            serial.println("- SMCLK Active");
-    }else{
-        serial.println("- SMCLK Inactive");
-    }
-    if( CheckResetSRC(csStatus, CS_STAT_MODCLK_ON) ){
-            serial.println("- MODCLK Active");
-    }else{
-        serial.println("- MODCLK Inactive");
-    }
-    if( CheckResetSRC(csStatus, CS_STAT_VLOCLK_ON) ){
-            serial.println("- VLOCLK Active");
-    }else{
-        serial.println("- VLOCLK Inactive");
-    }
-    if( CheckResetSRC(csStatus, CS_STAT_LFXTCLK_ON) ){
-            serial.println("- LFXTCLK Active");
-    }else{
-        serial.println("- LFXTCLK Inactive");
-    }
-    if( CheckResetSRC(csStatus, CS_STAT_REFOCLK_ON) ){
-            serial.println("- REFOCLK Active");
-    }else{
-        serial.println("- REFOCLK Inactive");
-    }
-    if( CheckResetSRC(csStatus, CS_STAT_ACLK_READY) ){
-            serial.println("- ACLK Ready");
-    }else{
-        serial.println("- ACLK NOT Ready");
-    }
-    if( CheckResetSRC(csStatus, CS_STAT_MCLK_READY) ){
-            serial.println("- MCLK Ready");
-    }else{
-        serial.println("- MCLK NOT Ready");
-    }
-    if( CheckResetSRC(csStatus, CS_STAT_HSMCLK_READY) ){
-            serial.println("- HSMCLK Ready");
-    }else{
-        serial.println("- HSMCLK NOT Ready");
-    }
-    if( CheckResetSRC(csStatus, CS_STAT_SMCLK_READY) ){
-            serial.println("- SMCLK Ready");
-    }else{
-        serial.println("- SMCLK NOT Ready");
-    }
-    if( CheckResetSRC(csStatus, CS_STAT_BCLK_READY) ){
-        serial.println("- BCLK Ready");
-    }else{
-        serial.println("- BCLK NOT Ready");
-    }
-
-    //Get and Clear ResetRegisters
+    //Get and clear CLOCK FAULT STATUS
     serial.println("========= ResetService Clock Faults =========");
     this->csFaults  = CS->IFG;
 
@@ -311,7 +318,12 @@ void ResetService::readCSStatus(){
         serial.println("- HFXT Start-count expired!");
     }
 
-    CS_clearInterruptFlag(CS_IFG_LFXTIFG | CS_IFG_HFXTIFG | CS_IFG_DCOR_SHTIFG | CS_IFG_DCOR_OPNIFG | CS_IFG_FCNTLFIFG | CS_IFG_FCNTHFIFG);
+    CS->CLRIFG |= CS_CLRIFG_CLR_LFXTIFG;
+    CS->CLRIFG |= CS_CLRIFG_CLR_HFXTIFG;
+    CS->CLRIFG |= CS_CLRIFG_CLR_DCOR_OPNIFG;
+    CS->CLRIFG |= CS_CLRIFG_CLR_FCNTLFIFG;
+    CS->CLRIFG |= CS_CLRIFG_CLR_FCNTHFIFG;
+    CS->CLRIFG |= CS_SETIFG_SET_LFXTIFG;
 
 
     serial.println("=============================================");
