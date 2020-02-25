@@ -41,7 +41,7 @@ extern "C" {
 
 #define PAYLOAD_SIZE_OFFSET     3
 
-#define INT_SIZE                (sizeof(unsigned int) * 8)
+#define INT_SIZE                (sizeof(unsigned int) * 8) //in bits
 
 enum slot_status{
     EMPTY = 0x00,
@@ -49,10 +49,24 @@ enum slot_status{
     FULL = 0x02
 };
 
+
+
+////
+// METADATA CONSTRUCTION:
+// 1  Byte       STATE (EMPTY/PARTIAL/FULL)
+// 16 Bytes      MD5
+// 2  Bytes      VERSION NR
+// 2  Bytes      (LSB , MSB)
+//
+//
+// 2048 Bytes    CRC Blocks
+////
+
+
 enum commands{
     START_OTA,
-    RECEIVE_METADATA,
-    SEND_METADATA,
+    SET_METADATA,
+    GET_METADATA,
     RECEIVE_PARTIAL_CRCS,
     SEND_MISSED_PARTIALS,
     RECEIVE_BLOCK,
@@ -61,7 +75,8 @@ enum commands{
     ERASE_SLOT,
     SET_BOOT_SLOT,
     GET_NUM_MISSED_BLOCKS,
-    GET_MISSED_BLOCKS
+    GET_MISSED_BLOCKS,
+    GET_MISSED_CRC
 };
 
 enum command_offsets {
@@ -161,7 +176,7 @@ class SoftwareUpdateService: public Service
      void receive_metadata(unsigned char* metadata);
      void send_metadata(unsigned char slot_number);
 
-     void receive_partial_crcs(unsigned char* crc_block, unsigned char num_bytes);
+     void receive_partial_crcs(unsigned char* crc_block, unsigned char num_bytes, unsigned short crc_offset);
      void receive_block(unsigned char* data_block, unsigned short block_offset);
      bool check_partial_crc(unsigned char* data_block, unsigned short block_offset);
 
@@ -175,6 +190,8 @@ class SoftwareUpdateService: public Service
 
      void get_num_missed_blocks();
      void get_missed_blocks();
+     void get_missed_crc();
+
 
      void print_metadata(unsigned char* metadata);
      void throw_error(unsigned char error);
@@ -189,6 +206,7 @@ class SoftwareUpdateService: public Service
      unsigned char payload_size;
 
      unsigned int blocks_received[MAX_BLOCK_AMOUNT/INT_SIZE] = { 0 };
+     unsigned int crc_received[MAX_BLOCK_AMOUNT/INT_SIZE] = { 0 };
      unsigned int missed_pointer = 0;
 
      MB85RS* fram;

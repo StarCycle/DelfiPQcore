@@ -17,18 +17,19 @@ Bootloader::Bootloader(MB85RS &fram){
 void Bootloader::JumpSlot(){
     uint8_t target_slot = 0;
     //this->fram->write(FRAM_TARGET_SLOT, &target_slot, 1);
-    this->fram->read(FRAM_TARGET_SLOT, &target_slot, 1);
-
+    serial.println("================= BOOTLOADER ================");
 
     asm("   MOV R0, PC\n"
         "   MOV R1, #0x20000000\n"
         "   STR R0, [R1]");
 
     uint32_t* pcPoint = (uint32_t*)0x20000000;
-
+    serial.print("= PC: ");
+    serial.println(*pcPoint, DEC);
     //Program Counter is either at: (0x000000XX, 0x000200XX, 0x000300XX)
     //meaning you can detect the current slot by looking at the 17th bit
-    uint8_t current_slot = (uint8_t)(*pcPoint >> 16);
+    current_slot = (uint8_t)(*pcPoint >> 16);
+
     switch(current_slot){
         case 0x00:
             current_slot = 0;
@@ -41,9 +42,10 @@ void Bootloader::JumpSlot(){
             break;
     }
 
-    serial.println("================= BOOTLOADER ================");
     serial.print("= Current slot: ");
     serial.println(current_slot, DEC);
+
+    this->fram->read(FRAM_TARGET_SLOT, &target_slot, 1);
 
     if(current_slot == 0 && (target_slot & 0x7F) != 0){ //if we are in slot0 (default slot) we might have to jump
         serial.print("= Target slot: ");
@@ -56,6 +58,7 @@ void Bootloader::JumpSlot(){
             this->fram->write(FRAM_TARGET_SLOT, &current_slot, 1); //reset target to slot0
         } else {
             serial.println("+ Preparing Permanent jump");
+            this->fram->write(FRAM_TARGET_SLOT, &current_slot, 1); //reset target to slot0
         }
 
         MAP_Interrupt_disableMaster();

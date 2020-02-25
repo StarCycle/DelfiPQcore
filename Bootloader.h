@@ -17,6 +17,7 @@ class Bootloader{
 private:
     MB85RS *fram;
 public:
+    uint8_t current_slot;
     Bootloader(MB85RS &fram);
     void JumpSlot();
 };
