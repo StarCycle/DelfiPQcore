@@ -43,12 +43,6 @@ extern "C" {
 
 #define INT_SIZE                (sizeof(unsigned int) * 8) //in bits
 
-enum slot_status{
-    EMPTY = 0x00,
-    PARTIAL = 0x01,
-    FULL = 0x02
-};
-
 
 
 ////
@@ -62,6 +56,30 @@ enum slot_status{
 // 2048 Bytes    CRC Blocks
 ////
 
+////
+// STATE BYTE:
+//  76543210
+// [10] : Empty(00), Partial(01), Full(10)
+// [2]  : UpdateFlag(100)(0x04)
+// [3]  : EraseFlag(1000)(0x08)
+// [4]  : MetaDataReceived(1000000) (0x10)
+// [5]  : PartialCRCReceived(1000000) (0x20)
+// [6]  : MD5_CORRECT Flag(1000000) (0x40)
+// [7]  : SlotUpdating slot1(0) or slot2(1)
+
+enum slot_status{
+    EMPTY = 0x00,
+    PARTIAL = 0x01,
+    FULL = 0x02
+};
+enum flags {
+    ERASE_FLAG = 0x08,
+    UPDATE_FLAG = 0x04,
+    METADATA_FLAG = 0x10,
+    PARTIAL_CRC_FLAG = 0x20,
+    MD5_CORRECT_FLAG = 0x40,
+    SLOT_SELECT_FLAG = 0x80
+};
 
 enum commands{
     START_OTA,
@@ -90,14 +108,6 @@ enum command_states {
     COMMAND_ERROR,
     COMMAND_REQUEST,
     COMMAND_REPLY
-};
-
-enum flags {
-    ERASE_FLAG = 0x01,
-    UPDATE_FLAG = 0x02,
-    METADATA_FLAG = 0x04,
-    PARTIAL_CRC_FLAG = 0x08,
-    MD5_INCORRECT_FLAG = 0x10
 };
 
 enum error_codes{
@@ -171,7 +181,7 @@ class SoftwareUpdateService: public Service
      SoftwareUpdateService(MB85RS &fram_in);
      virtual bool process( DataMessage &command, DataMessage &workingBuffer );
  private:
-     void start_OTA(unsigned char slot_number);
+     void start_OTA(unsigned char slot_number, bool allow_resume);
 
      void receive_metadata(unsigned char* metadata);
      void send_metadata(unsigned char slot_number);
@@ -189,6 +199,7 @@ class SoftwareUpdateService: public Service
      void set_boot_slot(unsigned char slot, bool permanent);
 
      void get_num_missed_blocks();
+     unsigned int get_num_missed_crc();
      void get_missed_blocks();
      void get_missed_crc();
 

@@ -45,9 +45,13 @@ bool SoftwareUpdateService::process(DataMessage &command, DataMessage &workingBu
 
         switch (command.getPayload()[COMMAND_METHOD]) {
         case START_OTA:
-            if(command.getSize() == PAYLOAD_SIZE_OFFSET + 1) {
+            if((command.getSize() == PAYLOAD_SIZE_OFFSET + 1) || (command.getSize() == PAYLOAD_SIZE_OFFSET + 2)){
                 if(command.getPayload()[COMMAND_DATA] == 1 || command.getPayload()[COMMAND_DATA] == 2) {
-                    start_OTA(command.getPayload()[COMMAND_DATA] - 1);
+                    if(command.getSize() == PAYLOAD_SIZE_OFFSET + 2){
+                        start_OTA(command.getPayload()[COMMAND_DATA] - 1, command.getPayload()[COMMAND_DATA+1] == 1);
+                    }else{
+                        start_OTA(command.getPayload()[COMMAND_DATA] - 1, false);
+                    }
                     if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) serial.println("\nOTA started!");
 
                 } else throw_error(SLOT_OUT_OF_RANGE);
@@ -76,12 +80,12 @@ bool SoftwareUpdateService::process(DataMessage &command, DataMessage &workingBu
 
         case RECEIVE_PARTIAL_CRCS:
             if(command.getSize() <= BLOCK_SIZE + PAYLOAD_SIZE_OFFSET + 2) { //2 extra bytes for offset bytes
-                serial.print("SIZE BYTE msB: ");
-                serial.println(command.getPayload()[COMMAND_DATA + 1],DEC);
-                serial.print("SIZE BYTE lsB: ");
-                serial.println(command.getPayload()[COMMAND_DATA],DEC);
-                serial.print("CRC OFFSET: ");
-                serial.println(command.getPayload()[COMMAND_DATA] | (command.getPayload()[COMMAND_DATA + 1] << 8), DEC);
+//                serial.print("SIZE BYTE msB: ");
+//                serial.println(command.getPayload()[COMMAND_DATA + 1],DEC);
+//                serial.print("SIZE BYTE lsB: ");
+//                serial.println(command.getPayload()[COMMAND_DATA],DEC);
+//                serial.print("CRC OFFSET: ");
+//                serial.println(command.getPayload()[COMMAND_DATA] | (command.getPayload()[COMMAND_DATA + 1] << 8), DEC);
                 receive_partial_crcs(&(command.getPayload()[COMMAND_DATA+2]), command.getSize() - (PAYLOAD_SIZE_OFFSET+2), command.getPayload()[COMMAND_DATA] | (command.getPayload()[COMMAND_DATA + 1] << 8));
                 if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) serial.println("\nPartial crc block received!");
             } else throw_error(PARAMETER_MISMATCH);
@@ -168,7 +172,7 @@ bool SoftwareUpdateService::process(DataMessage &command, DataMessage &workingBu
     }
 }
 
-void SoftwareUpdateService::start_OTA(unsigned char slot_number) {
+void SoftwareUpdateService::start_OTA(unsigned char slot_number, bool allow_resume) {
     payload_size = PAYLOAD_SIZE_OFFSET;
     uint8_t* current_slot = (uint8_t*)CURRENT_SLOT_ADDRESS;
     if(*current_slot != (slot_number + 1)) {
@@ -179,25 +183,28 @@ void SoftwareUpdateService::start_OTA(unsigned char slot_number) {
 
             if(state == EMPTY) {
                 state = PARTIAL; //Set status to Partial OTA
-                if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
-                fram->write((METADATA_SIZE + PAR_CRC_SIZE) * slot_number, &state, 1);
-                state_flags |= UPDATE_FLAG;
-                state_flags &= ~(METADATA_FLAG | PARTIAL_CRC_FLAG | MD5_INCORRECT_FLAG);
+                state |= UPDATE_FLAG;
+                if(slot_number == 1){
+                state |= SLOT_SELECT_FLAG;
+                }
+                //state_flags &= ~(METADATA_FLAG | PARTIAL_CRC_FLAG | MD5_INCORRECT_FLAG);
                 received_par_crcs = 0;
                 update_slot = slot_number;
+                state_flags = state;
+
                 for(int i = 0; i < (MAX_BLOCK_AMOUNT/INT_SIZE); i++) blocks_received[i] = 0;
                 for(int i = 0; i < (MAX_BLOCK_AMOUNT/INT_SIZE); i++) crc_received[i] = 0;
-                missed_pointer = 0;
+
+                if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
+                fram->write((METADATA_SIZE + PAR_CRC_SIZE) * slot_number, &state, 1);
+
             } else if(state == PARTIAL) {
                 // continue/resume OTA Update
-
-
-
-                if((state_flags & MD5_INCORRECT_FLAG) > 0 && update_slot == slot_number) {
-                    if((state_flags & METADATA_FLAG) > 0) {
-                        state_flags |= UPDATE_FLAG;
-                    } else return throw_error(METADATA_NOT_RECEIVED);
-                } else return throw_error(UPDATE_NOT_CURRENT_SESSION);
+                if(allow_resume){
+                    throw_error(UPDATE_ALREADY_STARTED);
+                }else{
+                    throw_error(UPDATE_ALREADY_STARTED);
+                }
             } else return throw_error(SLOT_NOT_EMPTY);
         //} else return throw_error(UPDATE_ALREADY_STARTED);
     } else return throw_error(SELF_ACTION);
@@ -214,6 +221,8 @@ void SoftwareUpdateService::receive_metadata(unsigned char* metadata) {
                 fram->write((METADATA_SIZE + PAR_CRC_SIZE) * update_slot + 1, metadata, METADATA_SIZE - 1);
                 num_update_blocks = temp_num_blocks;
                 state_flags |= METADATA_FLAG;   //set MetaData received Flag
+                if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
+                fram->write((METADATA_SIZE + PAR_CRC_SIZE) * update_slot, &state_flags, 1);
             } else return throw_error(UPDATE_TO_BIG);
         } else return throw_error(METADATA_ALREADY_RECEIVED);
     } else return throw_error(UPDATE_NOT_STARTED);
@@ -228,15 +237,20 @@ void SoftwareUpdateService::send_metadata(unsigned char slot_number) {
 
 void SoftwareUpdateService::receive_partial_crcs(unsigned char* crc_block, unsigned char num_bytes, unsigned short crc_offset) {
     payload_size = PAYLOAD_SIZE_OFFSET;
-    serial.println(crc_offset, DEC);
+//    serial.println(crc_offset, DEC);
     if((state_flags & UPDATE_FLAG) > 0) {
         if((state_flags & METADATA_FLAG) > 0) {
-            if(received_par_crcs + num_bytes <= num_update_blocks) {
+            if(crc_offset + num_bytes <= num_update_blocks) {
                 if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
                 fram->write((METADATA_SIZE + PAR_CRC_SIZE) * update_slot + METADATA_SIZE + crc_offset, crc_block, num_bytes);
-                received_par_crcs += num_bytes;
+                serial.println(num_bytes, DEC);
                 for(int k = 0; k < num_bytes; k++){
                     crc_received[(crc_offset+k) / INT_SIZE] |= 1 << ((crc_offset+k) % INT_SIZE);
+                }
+                if(this->get_num_missed_crc() == 0){ //if all CRC received, set flag
+                    state_flags |= PARTIAL_CRC_FLAG;
+                    if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
+                    fram->write((METADATA_SIZE + PAR_CRC_SIZE) * update_slot, &state_flags, 1);
                 }
             } else return throw_error(PARAMETER_MISMATCH);
         } else return throw_error(METADATA_NOT_RECEIVED);
@@ -246,9 +260,9 @@ void SoftwareUpdateService::receive_partial_crcs(unsigned char* crc_block, unsig
 void SoftwareUpdateService::receive_block(unsigned char* data_block, uint16_t block_offset) {
     payload_size = PAYLOAD_SIZE_OFFSET;
 
-    if((state_flags & UPDATE_FLAG) > 0) {
-        if((state_flags & METADATA_FLAG) > 0) {
-            if((state_flags & PARTIAL_CRC_FLAG) == 0) {
+    if((state_flags & UPDATE_FLAG) == UPDATE_FLAG) {
+        if((state_flags & METADATA_FLAG) == METADATA_FLAG) {
+            if((state_flags & PARTIAL_CRC_FLAG) == PARTIAL_CRC_FLAG) {
                 if(received_par_crcs < num_update_blocks * BLOCK_SIZE) {
                     if(block_offset <= num_update_blocks) {
                         if(check_partial_crc(data_block, block_offset)) {
@@ -323,23 +337,27 @@ void SoftwareUpdateService::check_md5(unsigned char slot_number) {
         }
     }
 
-    if(equal) state_flags &= ~MD5_INCORRECT_FLAG;
-    else state_flags |= MD5_INCORRECT_FLAG;
+    if(equal){
+        state_flags |= MD5_CORRECT_FLAG;
+        serial.println("MD5 Correct!");
+    }
+    if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
+    fram->write((METADATA_SIZE + PAR_CRC_SIZE) * update_slot, &state_flags, 1);
     payload_data[COMMAND_DATA] = equal;
 }
 
 void SoftwareUpdateService::stop_OTA() {
     payload_size = PAYLOAD_SIZE_OFFSET + 1;
+    check_md5(update_slot);
 
-    if((state_flags & UPDATE_FLAG) > 0) {
+    if((state_flags & UPDATE_FLAG) == UPDATE_FLAG) { //OTA is running, time to kill it.
         state_flags &= ~UPDATE_FLAG;
-        check_md5(update_slot);
-        if(!payload_data[COMMAND_DATA]) return throw_error(MD5_MISMATCH);
-        if(payload_data[COMMAND_DATA]) {
-           unsigned char temp = FULL;
-           if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
-           fram->write((METADATA_SIZE + PAR_CRC_SIZE) * update_slot, &temp, 1);
-        } else return throw_error(MD5_MISMATCH);
+        if(state_flags & MD5_CORRECT_FLAG == MD5_CORRECT_FLAG){ //MD5 was deemed correct. So set status to FULL
+            state_flags &= ~0x03;
+            state_flags |= FULL;
+        }
+        if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
+        fram->write((METADATA_SIZE + PAR_CRC_SIZE) * update_slot, &state_flags, 1);
     } else return throw_error(UPDATE_NOT_STARTED);
 }
 
@@ -377,7 +395,7 @@ void SoftwareUpdateService::set_boot_slot(unsigned char slot, bool permanent) {
             if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
             fram->read((METADATA_SIZE + PAR_CRC_SIZE) * (slot - 1), &state, 1);
 
-            if(state == FULL || true) {
+            if((state & FULL == FULL) && (state & MD5_CORRECT_FLAG == MD5_CORRECT_FLAG) ) {
                 uint8_t target_slot = slot | ((permanent) ? BOOT_PERMANENTLY : 0);
                 fram->write(FRAM_TARGET_SLOT, &target_slot, 1);
                 MAP_SysCtl_rebootDevice();
@@ -421,6 +439,16 @@ void SoftwareUpdateService::get_num_missed_blocks() {
         }
         //memcpy(&payload_data[COMMAND_DATA], &count, sizeof(uint16_t));
     } else return throw_error(UPDATE_ALREADY_STARTED);
+}
+
+unsigned int SoftwareUpdateService::get_num_missed_crc() {
+    unsigned int count = 0;
+    for(int i = 0; i < num_update_blocks; i++) {
+        if((crc_received[missed_pointer / INT_SIZE] & (1 << missed_pointer % INT_SIZE)) == 0) { //there is a block missing here
+           count++;
+        }
+    }
+    return count;
 }
 
 void SoftwareUpdateService::get_missed_blocks() {
