@@ -285,6 +285,8 @@ void SoftwareUpdateService::receive_metadata(unsigned char* metadata) {
                 }else if(update_slot == 2){
                     fram->write(SLOT2_METADATA_STATE, &state_flags, 1);
                 }
+                serial.print("METADATA RECEIVED, Status: ");
+                serial.println(state_flags, HEX);
 
             } else return throw_error(UPDATE_TO_BIG);
         } else return throw_error(METADATA_ALREADY_RECEIVED);
@@ -534,18 +536,20 @@ void SoftwareUpdateService::set_boot_slot(unsigned char slot, bool permanent) {
         fram->write(FRAM_TARGET_SLOT, &target_slot, 1);
         MAP_SysCtl_rebootDevice();
     } else {
-        check_md5(slot);
-        if((state_flags & MD5_CORRECT_FLAG) == 0) return throw_error(MD5_MISMATCH);
-
-        unsigned char state;
+        unsigned char slotFlag = 0;
         if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
         if(slot == 1){
-            fram->read(SLOT1_METADATA_STATE, &state, 1);
+            fram->read(SLOT1_METADATA_STATE, &slotFlag, 1);
         }else if(slot == 2){
-            fram->read(SLOT2_METADATA_STATE, &state, 1);
+            fram->read(SLOT2_METADATA_STATE, &slotFlag, 1);
         }
+        serial.print("Status flag of Target: ");
+        serial.println(slotFlag, HEX);
 
-        if(((state & FULL) == FULL) && ((state & MD5_CORRECT_FLAG) == MD5_CORRECT_FLAG) ) {
+        //check_md5(slot); No reason to check again, flag should be set already.
+
+        if((slotFlag & MD5_CORRECT_FLAG) == 0) return throw_error(MD5_MISMATCH);
+        if((slotFlag & FULL) == FULL) {
             uint8_t target_slot = slot | ((permanent) ? BOOT_PERMANENTLY : 0);
             fram->write(FRAM_TARGET_SLOT, &target_slot, 1);
             MAP_SysCtl_rebootDevice();

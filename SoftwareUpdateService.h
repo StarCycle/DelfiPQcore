@@ -74,10 +74,10 @@ extern "C" {
 // [10] : Empty(00), Partial(01), Full(10)
 // [2]  : UpdateFlag(100)(0x04)
 // [3]  : EraseFlag(1000)(0x08)
-// [4]  : MetaDataReceived(1000000) (0x10)
-// [5]  : PartialCRCReceived(1000000) (0x20)
-// [6]  : MD5_CORRECT Flag(1000000) (0x40)
-// [7]  : SlotUpdating slot1(0) or slot2(1)
+// [4]  : MetaDataReceived(1 0000) (0x10)
+// [5]  : PartialCRCReceived(10 0000) (0x20)
+// [6]  : MD5_CORRECT Flag(100 0000) (0x40)
+// [7]  : SlotUpdating (0x80) slot1(0) or slot2(1)
 //
 
 #define UPDATE_PROGRESS_CHECKLIST_SIZE  MAX_BLOCK_AMOUNT/BYTE_SIZE
