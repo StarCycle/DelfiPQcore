@@ -17,7 +17,9 @@ extern "C" {
     #include "md5.h"
 }
 
-#define SOFTWAREUPDATE_SERVICE  18
+#define SOFTWAREUPDATE_SERVICE              18
+#define SOFTWAREUPDATE_SERVICE_FRAM_OFFSET  0
+#define SOFTWAREUPDATE_SERVICE_FRAM_SIZE    2 * (METADATA_SIZE) + 2 * (PAR_CRC_SIZE) + UPDATE_PROGRESS_SIZE
 
 #define FRAM_SIZE               32768
 #define BLOCK_SIZE              32
@@ -28,34 +30,44 @@ extern "C" {
 #define SECTOR_SIZE             (SLOT_SIZE / SECTORS_PER_SLOT)
 #define NUM_SLOTS               2
 #define PAR_CRC_SIZE            (SLOT_SIZE / BLOCK_SIZE)
-#define METADATA_SIZE           (MD5_SIZE + 8 + 2 + 1)
+//#define METADATA_SIZE           (MD5_SIZE + 8 + 2 + 1)
 #define MAX_BLOCK_AMOUNT        (SLOT_SIZE / BLOCK_SIZE)
 
-#define BANK1_ADDRESS           0x20000
-#define CURRENT_SLOT_ADDRESS    0x20000000;
-
-#define ACKNOWLEDGE             13
-
-#define BOOT_PERMANENTLY   0x80
-#define FRAM_TARGET_SLOT   0x7FF0
-
-#define PAYLOAD_SIZE_OFFSET     3
-
-#define INT_SIZE                (sizeof(unsigned int) * 8) //in bits
-
-
+//sizes of FRAM Data and locations
+#define METADATA_STATE_SIZE         1
+#define METADATA_VERSION_SIZE       8 //<-- this can be shortened
+#define METADATA_NR_OF_BLOCKS_SIZE  2
+#define METADATA_SIZE               METADATA_STATE_SIZE + MD5_SIZE + METADATA_VERSION_SIZE + METADATA_NR_OF_BLOCKS_SIZE
 
 ////
-// METADATA CONSTRUCTION:
+// METADATA:
 // 1  Byte       STATE (EMPTY/PARTIAL/FULL)
 // 16 Bytes      MD5
 // 2  Bytes      VERSION NR
 // 2  Bytes      (LSB , MSB)
-//
-//
-// 2048 Bytes    CRC Blocks
 ////
 
+#define SLOT1_METADATA              SOFTWAREUPDATE_SERVICE_FRAM_OFFSET
+#define SLOT1_METADATA_STATE        SLOT1_METADATA
+#define SLOT1_METADATA_MD5          SLOT1_METADATA_STATE + METADATA_STATE_SIZE
+#define SLOT1_METADATA_VERSION      SLOT1_METADATA_MD5 + MD5_SIZE
+#define SLOT1_METADATA_NR_OF_BLOCKS SLOT1_METADATA_VERSION + METADATA_VERSION_SIZE
+#define SLOT1_PAR_CRC               SLOT1_METADATA + METADATA_SIZE
+
+#define SLOT2_METADATA              SLOT1_PAR_CRC + PAR_CRC_SIZE
+#define SLOT2_METADATA_STATE        SLOT2_METADATA
+#define SLOT2_METADATA_MD5          SLOT2_METADATA_STATE + METADATA_STATE_SIZE
+#define SLOT2_METADATA_VERSION      SLOT2_METADATA_MD5 + MD5_SIZE
+#define SLOT2_METADATA_NR_OF_BLOCKS SLOT2_METADATA_VERSION + METADATA_VERSION_SIZE
+#define SLOT2_PAR_CRC               SLOT2_METADATA + METADATA_SIZE
+
+////
+// UPDATE_PROGRESS:
+// 1                            Byte       STATE (EMPTY/PARTIAL/FULL)
+// MAX_BLOCK_AMOUNT/INT_SIZE    Bytes      CRC Bitwise checklist
+// MAX_BLOCK_AMOUNT/INT_SIZE    Bytes      BLOCK Bitwise checklist
+// 2  Bytes      (LSB , MSB)
+////
 ////
 // STATE BYTE:
 //  76543210
@@ -66,6 +78,29 @@ extern "C" {
 // [5]  : PartialCRCReceived(1000000) (0x20)
 // [6]  : MD5_CORRECT Flag(1000000) (0x40)
 // [7]  : SlotUpdating slot1(0) or slot2(1)
+//
+
+#define UPDATE_PROGRESS_CHECKLIST_SIZE  MAX_BLOCK_AMOUNT/BYTE_SIZE
+#define UPDATE_PROGRESS_SIZE            1 + 2 * (UPDATE_PROGRESS_CHECKLIST_SIZE)
+
+#define UPDATE_PROGRESS_STATE           SLOT2_PAR_CRC + PAR_CRC_SIZE
+#define UPDATE_PROGRESS_CRC             UPDATE_PROGRESS_STATE + 1
+#define UPDATE_PROGRESS_BLOCKS          UPDATE_PROGRESS_CRC + UPDATE_PROGRESS_CHECKLIST_SIZE
+
+#define BANK1_ADDRESS           0x20000
+#define CURRENT_SLOT_ADDRESS    0x20000000
+
+#define ACKNOWLEDGE             13
+
+#define BOOT_PERMANENTLY   0x80
+#define FRAM_TARGET_SLOT   0x7FF0
+
+#define PAYLOAD_SIZE_OFFSET     3
+
+//#define INT_SIZE                (sizeof(unsigned int) * 8) //in bits
+#define BYTE_SIZE               8 //in bits
+
+
 
 enum slot_status{
     EMPTY = 0x00,
@@ -198,7 +233,7 @@ class SoftwareUpdateService: public Service
 
      void set_boot_slot(unsigned char slot, bool permanent);
 
-     void get_num_missed_blocks();
+     unsigned int  get_num_missed_blocks();
      unsigned int get_num_missed_crc();
      void get_missed_blocks();
      void get_missed_crc();
@@ -216,9 +251,8 @@ class SoftwareUpdateService: public Service
      unsigned char* payload_data;
      unsigned char payload_size;
 
-     unsigned int blocks_received[MAX_BLOCK_AMOUNT/INT_SIZE] = { 0 };
-     unsigned int crc_received[MAX_BLOCK_AMOUNT/INT_SIZE] = { 0 };
-     unsigned int missed_pointer = 0;
+     unsigned char blocks_received[MAX_BLOCK_AMOUNT/BYTE_SIZE] = { 0 };
+     unsigned char crc_received[MAX_BLOCK_AMOUNT/BYTE_SIZE] = { 0 };
 
      MB85RS* fram;
 };
