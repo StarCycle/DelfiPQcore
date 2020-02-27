@@ -12,6 +12,7 @@
 #include "DSerial.h"
 #include "MB85RS.h"
 #include "DataMessage.h"
+#include "Bootloader.h"
 
 extern "C" {
     #include "md5.h"
@@ -120,9 +121,9 @@ enum commands{
     START_OTA,
     SET_METADATA,
     GET_METADATA,
-    RECEIVE_PARTIAL_CRCS,
+    SET_PARTIAL_CRCS,
     SEND_MISSED_PARTIALS,
-    RECEIVE_BLOCK,
+    SET_BLOCK,
     CHECK_MD5,
     STOP_OTA,
     ERASE_SLOT,
@@ -216,40 +217,40 @@ class SoftwareUpdateService: public Service
      SoftwareUpdateService(MB85RS &fram_in);
      virtual bool process( DataMessage &command, DataMessage &workingBuffer );
  private:
-     void start_OTA(unsigned char slot_number, bool allow_resume);
+     void startOTA(unsigned char slot_number, bool allow_resume);
 
-     void receive_metadata(unsigned char* metadata);
-     void send_metadata(unsigned char slot_number);
+     void setMetadata(unsigned char* metadata);
+     void getMetadata(unsigned char slot_number);
 
-     void receive_partial_crcs(unsigned char* crc_block, unsigned char num_bytes, unsigned short crc_offset);
-     void receive_block(unsigned char* data_block, unsigned short block_offset);
-     bool check_partial_crc(unsigned char* data_block, unsigned short block_offset);
+     void setPartialCRCs(unsigned char* crc_block, unsigned char num_bytes, unsigned short crc_offset);
+     void setBlock(unsigned char* data_block, unsigned short block_offset);
+     bool checkPartialCRC(unsigned char* data_block, unsigned short block_offset);
 
-     void check_md5(unsigned char slot_number);
+     void checkMD5(unsigned char slot_number);
 
-     void stop_OTA();
+     void stopOTA();
 
-     void erase_slot(unsigned char slot);
+     void eraseSlot(unsigned char slot);
 
-     void set_boot_slot(unsigned char slot, bool permanent);
+     void setBootSlot(unsigned char slot, bool permanent);
 
-     unsigned int  get_num_missed_blocks();
-     unsigned int get_num_missed_crc();
-     void get_missed_blocks();
-     void get_missed_crc();
+     unsigned int  getNumOfMissedBlocks();
+     unsigned int getNumOfMissedCRCs();
+     void getMissedBlocks();
+     void getMissedCRCs();
 
 
      void print_metadata(unsigned char* metadata);
      void throw_error(unsigned char error);
 
      unsigned char state_flags = 0;
-     unsigned char update_slot;
-     unsigned char slot_erase;
+     unsigned char update_slot = 0;
+     unsigned char slot_erase = 0;
      unsigned short num_update_blocks = 0;
      unsigned short received_par_crcs = 0;
 
-     unsigned char* payload_data;
-     unsigned char payload_size;
+     unsigned char* payload_data = 0;
+     unsigned char payload_size = 0;
 
      unsigned char blocks_received[MAX_BLOCK_AMOUNT/BYTE_SIZE] = { 0 };
      unsigned char crc_received[MAX_BLOCK_AMOUNT/BYTE_SIZE] = { 0 };

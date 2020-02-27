@@ -20,6 +20,7 @@ public:
     uint8_t current_slot;
     Bootloader(MB85RS &fram);
     void JumpSlot();
+    static unsigned char getCurrentSlot();
 };
 
 
