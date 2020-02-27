@@ -93,9 +93,6 @@ extern "C" {
 
 #define ACKNOWLEDGE             13
 
-#define BOOT_PERMANENTLY   0x80
-#define FRAM_TARGET_SLOT   0x7FF0
-
 #define PAYLOAD_SIZE_OFFSET     3
 
 //#define INT_SIZE                (sizeof(unsigned int) * 8) //in bits
@@ -130,7 +127,8 @@ enum commands{
     SET_BOOT_SLOT,
     GET_NUM_MISSED_BLOCKS,
     GET_MISSED_BLOCKS,
-    GET_MISSED_CRC
+    GET_MISSED_CRC,
+    GET_VERSION_NUMBER
 };
 
 enum command_offsets {
@@ -166,7 +164,8 @@ enum error_codes{
     OFFSET_OUT_OF_RANGE,
     SLOT_NOT_EMPTY,
     SLOT_NOT_PROGRAMMED,
-    SELF_ACTION
+    SELF_ACTION,
+    NO_VERSION_NUMBER
 };
 
 enum metadata_offset {
@@ -215,6 +214,7 @@ class SoftwareUpdateService: public Service
 {
  public:
      SoftwareUpdateService(MB85RS &fram_in);
+     SoftwareUpdateService(MB85RS &fram_in, uint8_t * versionString);
      virtual bool process( DataMessage &command, DataMessage &workingBuffer );
  private:
      void startOTA(unsigned char slot_number, bool allow_resume);
@@ -242,6 +242,10 @@ class SoftwareUpdateService: public Service
 
      void print_metadata(unsigned char* metadata);
      void throw_error(unsigned char error);
+
+     bool hasVersionNumber;
+     uint8_t versionNumber[8] = {0};
+     void getVersionNumber();
 
      unsigned char state_flags = 0;
      unsigned char update_slot = 0;

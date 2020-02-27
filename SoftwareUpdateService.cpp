@@ -9,6 +9,20 @@
 
 extern DSerial serial;
 
+uint8_t HexStringToNibble(char c){
+    if ((c) >= 'a'){
+        return c - 87;
+    }else if ((c) >= 'A'){
+        return c - 55;
+    }else{
+        return c - 48;
+    }
+}
+
+uint8_t NibblesToByte(uint8_t msb, uint8_t lsb){
+    return ((msb << 4) | lsb);
+}
+
 /**
  *
  *   Process the Service (Called by CommandHandler)
@@ -24,8 +38,26 @@ extern DSerial serial;
  *
  */
 
+SoftwareUpdateService::SoftwareUpdateService(MB85RS &fram_in, uint8_t * versionString) {
+    fram = &fram_in;
+    hasVersionNumber = true;
+    serial.println("Has SW Version!");
+    serial.print("SOFTWARE VERSION:  ");
+    this->versionNumber[0] = NibblesToByte(HexStringToNibble(versionString[0]),HexStringToNibble(versionString[1]));
+    this->versionNumber[1] = NibblesToByte(HexStringToNibble(versionString[2]),HexStringToNibble(versionString[3]));
+    this->versionNumber[2] = NibblesToByte(HexStringToNibble(versionString[4]),HexStringToNibble(versionString[5]));
+    this->versionNumber[3] = NibblesToByte(HexStringToNibble(versionString[6]),HexStringToNibble(versionString[7]));
+    this->versionNumber[4] = NibblesToByte(HexStringToNibble(versionString[8]),HexStringToNibble(versionString[9]));
+    this->versionNumber[5] = NibblesToByte(HexStringToNibble(versionString[10]),HexStringToNibble(versionString[11]));
+    this->versionNumber[6] = NibblesToByte(HexStringToNibble(versionString[12]),HexStringToNibble(versionString[13]));
+    this->versionNumber[7] = NibblesToByte(HexStringToNibble(versionString[14]),HexStringToNibble(versionString[15]));
+
+}
+
 SoftwareUpdateService::SoftwareUpdateService(MB85RS &fram_in) {
     fram = &fram_in;
+    hasVersionNumber = false;
+    serial.println("WARNING: no SW Version!");
 }
 
 bool SoftwareUpdateService::process(DataMessage &command, DataMessage &workingBuffer) {
@@ -149,6 +181,11 @@ bool SoftwareUpdateService::process(DataMessage &command, DataMessage &workingBu
                 getMissedCRCs();
             } else throw_error(PARAMETER_MISMATCH);
             break;
+        case GET_VERSION_NUMBER:
+            if(command.getSize() == PAYLOAD_SIZE_OFFSET) {
+                getVersionNumber();
+            } else throw_error(PARAMETER_MISMATCH);
+            break;
         default:
             break;
         }
@@ -162,6 +199,28 @@ bool SoftwareUpdateService::process(DataMessage &command, DataMessage &workingBu
         // report the command was not processed
         return false;
     }
+}
+
+void SoftwareUpdateService::getVersionNumber(){
+    serial.println("SoftwareVersionService: Software Version Request");
+    // respond to ping
+    if(this->hasVersionNumber == true){
+        payload_size = 10;
+        payload_data[COMMAND_RESPONSE] = SERVICE_RESPONSE_REPLY;
+        serial.println("Has SW Version! ");
+        for(int i = 0; i < 8; i++){
+            serial.print(versionNumber[i],HEX);
+        }
+        serial.println();
+        payload_data[2] = this->versionNumber[0];
+        payload_data[3] = this->versionNumber[1];
+        payload_data[4] = this->versionNumber[2];
+        payload_data[5] = this->versionNumber[3];
+        payload_data[6] = this->versionNumber[4];
+        payload_data[7] = this->versionNumber[5];
+        payload_data[8] = this->versionNumber[6];
+        payload_data[9] = this->versionNumber[7];
+    }else return throw_error(NO_VERSION_NUMBER);
 }
 
 void SoftwareUpdateService::startOTA(unsigned char slot_number, bool allow_resume) {
@@ -580,8 +639,8 @@ void SoftwareUpdateService::eraseSlot(unsigned char slot) {
 
 void SoftwareUpdateService::setBootSlot(unsigned char slot, bool permanent) {
     if(slot == 0) { //if setting SLOT0 (fallback slot), no worries, just do it.
-        uint8_t target_slot = (permanent) ? BOOT_PERMANENTLY : 0;
-        fram->write(FRAM_TARGET_SLOT, &target_slot, 1);
+        uint8_t target_slot = (permanent) ? BOOT_PERMANENT_FLAG : 0;
+        fram->write(BOOTLOADER_TARGET_REG, &target_slot, 1);
         payload_size = 2;
         payload_data[COMMAND_RESPONSE] = SERVICE_RESPONSE_REPLY;
         this->setPostFunc([](){ MAP_SysCtl_rebootDevice();});
@@ -600,8 +659,8 @@ void SoftwareUpdateService::setBootSlot(unsigned char slot, bool permanent) {
 
         if((slotFlag & MD5_CORRECT_FLAG) == 0) return throw_error(MD5_MISMATCH);
         if((slotFlag & FULL) == FULL) {
-            uint8_t target_slot = slot | ((permanent) ? BOOT_PERMANENTLY : 0);
-            fram->write(FRAM_TARGET_SLOT, &target_slot, 1);
+            uint8_t target_slot = slot | ((permanent) ? BOOT_PERMANENT_FLAG : 0);
+            fram->write(BOOTLOADER_TARGET_REG, &target_slot, 1);
             payload_size = 2;
             payload_data[COMMAND_RESPONSE] = SERVICE_RESPONSE_REPLY;
             this->setPostFunc([](){ MAP_SysCtl_rebootDevice();});
@@ -814,6 +873,9 @@ void SoftwareUpdateService::throw_error(unsigned char error) {
         break;
     case SELF_ACTION:
         serial.println("The requested slot  cannot perform an action on itself.");
+        break;
+    case NO_VERSION_NUMBER:
+        serial.println("Current Software does not have a version number!");
         break;
     default:
         break;
