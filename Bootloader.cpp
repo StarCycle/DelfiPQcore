@@ -65,7 +65,7 @@ void Bootloader::JumpSlot(){
         uint8_t succesfulBootFlag = 0;
         fram->read(FRAM_BOOT_SUCCES_FLAG, &succesfulBootFlag, 1);
         if(succesfulBootFlag == 0){ //Boot is not succesful, fallback on default slot.
-            serial.println("# Last Boot unsuccesful, resetting TargetSlot")
+            serial.println("# Last Boot unsuccesful, resetting TargetSlot");
             this->fram->write(BOOTLOADER_TARGET_REG, &current_slot, 1); //reset target to slot0
             this->fram->read(BOOTLOADER_TARGET_REG, &target_slot, 1);
             succesfulBootFlag = 1; //reset bootflag.
@@ -123,7 +123,7 @@ void Bootloader::JumpSlot(){
         serial.println("=============================================");
         void (*slotPtr)(void) = (void (*)())(*resetPtr);
         slotPtr();  //This is the jump!
-        while(1);
+        while(1); //should never end up here
 
     }else{
         serial.println("=============================================");
