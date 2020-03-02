@@ -60,12 +60,14 @@ void Bootloader::JumpSlot(){
 
 
 
-    if(current_slot == 0){
+    if((current_slot & 0x7E) == 0){
         //check Succesful boot flag for problems
         uint8_t succesfulBootFlag = 0;
         fram->read(FRAM_BOOT_SUCCES_FLAG, &succesfulBootFlag, 1);
         if(succesfulBootFlag == 0){ //Boot is not succesful, fallback on default slot.
+            serial.println("# Last Boot unsuccesful, resetting TargetSlot")
             this->fram->write(BOOTLOADER_TARGET_REG, &current_slot, 1); //reset target to slot0
+            this->fram->read(BOOTLOADER_TARGET_REG, &target_slot, 1);
             succesfulBootFlag = 1; //reset bootflag.
             fram->write(FRAM_BOOT_SUCCES_FLAG, &succesfulBootFlag, 1);
         }
@@ -93,7 +95,7 @@ void Bootloader::JumpSlot(){
 
         //lowerBootSuccesFlag before jump
         uint8_t succesfulBootFlag = 0;
-        this->fram->write(BOOTLOADER_TARGET_REG, &target_slot, 1);
+        this->fram->write(FRAM_BOOT_SUCCES_FLAG, &succesfulBootFlag, 1);
 
         MAP_Interrupt_disableMaster();
         MAP_WDT_A_holdTimer();

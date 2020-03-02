@@ -41,8 +41,6 @@ uint8_t NibblesToByte(uint8_t msb, uint8_t lsb){
 SoftwareUpdateService::SoftwareUpdateService(MB85RS &fram_in, uint8_t * versionString) {
     fram = &fram_in;
     hasVersionNumber = true;
-    serial.println("Has SW Version!");
-    serial.print("SOFTWARE VERSION:  ");
     this->versionNumber[0] = NibblesToByte(HexStringToNibble(versionString[0]),HexStringToNibble(versionString[1]));
     this->versionNumber[1] = NibblesToByte(HexStringToNibble(versionString[2]),HexStringToNibble(versionString[3]));
     this->versionNumber[2] = NibblesToByte(HexStringToNibble(versionString[4]),HexStringToNibble(versionString[5]));
