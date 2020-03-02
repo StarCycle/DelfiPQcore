@@ -9,9 +9,9 @@
 #define BOOTLOADER_H_
 
 #include "MB85RS.h"
+#include "FRAMMap.h"
 
 #define BOOT_PERMANENT_FLAG          0x80
-#define BOOTLOADER_TARGET_REG        0x7FF0
 
 class Bootloader{
 private:

@@ -13,13 +13,14 @@
 #include "MB85RS.h"
 #include "DataMessage.h"
 #include "Bootloader.h"
+#include "FRAMMap.h"
 
 extern "C" {
     #include "md5.h"
 }
 
 #define SOFTWAREUPDATE_SERVICE              18
-#define SOFTWAREUPDATE_SERVICE_FRAM_OFFSET  0
+//#define SOFTWAREUPDATE_SERVICE_FRAM_OFFSET  0
 #define SOFTWAREUPDATE_SERVICE_FRAM_SIZE    2 * (METADATA_SIZE) + 2 * (PAR_CRC_SIZE) + UPDATE_PROGRESS_SIZE
 
 #define FRAM_SIZE               32768

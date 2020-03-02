@@ -23,8 +23,8 @@ unsigned char Bootloader::getCurrentSlot(){
             "   STR R0, [R1]");
 
     uint32_t* pcPoint = (uint32_t*)0x20000000;
-    serial.print("= PC: ");
-    serial.println(*pcPoint, DEC);
+//    serial.print("= PC: ");
+//    serial.println(*pcPoint, DEC);
     //Program Counter is either at: (0x000000XX, 0x000200XX, 0x000300XX)
     //meaning you can detect the current slot by looking at the 17th bit
     slotNumber = (uint8_t)(*pcPoint >> 16);
@@ -56,7 +56,28 @@ void Bootloader::JumpSlot(){
 
     this->fram->read(BOOTLOADER_TARGET_REG, &target_slot, 1);
 
-    if(current_slot == 0 && (target_slot & 0x7F) != 0){ //if we are in slot0 (default slot) we might have to jump
+    //todo, check nr of Reboots to reset targetslot to 0
+
+
+
+    if(current_slot == 0){
+        //check Succesful boot flag for problems
+        uint8_t succesfulBootFlag = 0;
+        fram->read(FRAM_BOOT_SUCCES_FLAG, &succesfulBootFlag, 1);
+        if(succesfulBootFlag == 0){ //Boot is not succesful, fallback on default slot.
+            this->fram->write(BOOTLOADER_TARGET_REG, &current_slot, 1); //reset target to slot0
+            succesfulBootFlag = 1; //reset bootflag.
+            fram->write(FRAM_BOOT_SUCCES_FLAG, &succesfulBootFlag, 1);
+        }
+    }else{
+        //we are in target slot succesfully, hence it is a succesful boot
+        uint8_t succesfulBootFlag = 1; //reset bootflag.
+        fram->write(FRAM_BOOT_SUCCES_FLAG, &succesfulBootFlag, 1);
+    }
+
+
+
+    if(current_slot == 0 && (target_slot & 0x7F) != 0){ //if we are in slot0 (default slot) and there is a jump target
         serial.print("= Target slot: ");
         serial.println((target_slot & 0x7F), DEC);
         serial.print("= Permanent Jump: ");
@@ -69,6 +90,10 @@ void Bootloader::JumpSlot(){
             serial.println("+ Preparing Permanent jump");
             //this->fram->write(FRAM_TARGET_SLOT, &current_slot, 1); //reset target to slot0
         }
+
+        //lowerBootSuccesFlag before jump
+        uint8_t succesfulBootFlag = 0;
+        this->fram->write(BOOTLOADER_TARGET_REG, &target_slot, 1);
 
         MAP_Interrupt_disableMaster();
         MAP_WDT_A_holdTimer();

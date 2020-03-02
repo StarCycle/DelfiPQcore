@@ -64,6 +64,13 @@ ResetService::ResetService(const unsigned long WDport, const unsigned long WDpin
     resetServiceStub = this;
 }
 
+ResetService::ResetService(const unsigned long WDport, const unsigned long WDpin, MB85RS* fram_in) :
+        WDIPort(WDport), WDIPin(WDpin), fram(fram_in) {
+    resetServiceStub = this;
+    this->hasFram = true;
+}
+
+
 /**
  *
  *   ResetService Initialize watch-dog service and interrupts.
@@ -171,6 +178,18 @@ void ResetService::readResetStatus(){
         serial.println("- POR Caused by DCO short circuit fault in external resistor!");
     }
     serial.println("=============================================");
+
+    if(hasFram){
+        this->fram->write(FRAM_RESET_CAUSE, &((uint8_t*)&resetStatus)[1], 3);
+        if(!CheckResetSRC(resetStatus, RESET_REBOOT)){
+            uint8_t resetCounter = 0;
+            fram->read(FRAM_RESET_COUNTER, &resetCounter, 1);
+            resetCounter++;
+            fram->write(FRAM_RESET_COUNTER, &resetCounter, 1);
+        }
+    }
+
+
 }
 
 void ResetService::readCSStatus(){
