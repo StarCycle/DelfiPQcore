@@ -13,6 +13,7 @@
 #include "ResetCodes.h"
 #include "MB85RS.h"
 #include "FRAMMap.h"
+#include "Bootloader.h"
 
 #define RESET_SERVICE           19
 #define RESET_ERROR              0
