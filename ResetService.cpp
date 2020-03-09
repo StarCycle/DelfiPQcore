@@ -64,6 +64,13 @@ ResetService::ResetService(const unsigned long WDport, const unsigned long WDpin
     resetServiceStub = this;
 }
 
+ResetService::ResetService(const unsigned long WDport, const unsigned long WDpin, MB85RS* fram_in) :
+        WDIPort(WDport), WDIPin(WDpin), fram(fram_in) {
+    resetServiceStub = this;
+    this->hasFram = true;
+}
+
+
 /**
  *
  *   ResetService Initialize watch-dog service and interrupts.
@@ -170,6 +177,29 @@ void ResetService::readResetStatus(){
     if( CheckResetSRC(resetStatus, RESET_CSRESET_DCOSHORT)){
         serial.println("- POR Caused by DCO short circuit fault in external resistor!");
     }
+
+    if(hasFram){
+        if(fram->ping()){
+            serial.println("+ FRAM present");
+            this->fram->write(FRAM_RESET_CAUSE, &((uint8_t*)&resetStatus)[1], 3);
+            uint8_t resetCounter = 0;
+            fram->read(FRAM_RESET_COUNTER + Bootloader::getCurrentSlot(), &resetCounter, 1);
+            if(!CheckResetSRC(resetStatus, RESET_REBOOT)){
+                serial.println("+ Unintentional reset!");
+                resetCounter++;
+                fram->write(FRAM_RESET_COUNTER + Bootloader::getCurrentSlot(), &resetCounter, 1);
+            }else{
+                serial.println("+ Intentional reset");
+                resetCounter = 0;
+                fram->write(FRAM_RESET_COUNTER + Bootloader::getCurrentSlot(), &resetCounter, 1);
+            }
+            serial.print("+ Reset counter at: ");
+            serial.println(resetCounter, DEC);
+        }else{
+            serial.println("# FRAM unavailable");
+        }
+    }
+
     serial.println("=============================================");
 }
 

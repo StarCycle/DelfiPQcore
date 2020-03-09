@@ -11,6 +11,9 @@
 #include "Service.h"
 #include "DSerial.h"
 #include "ResetCodes.h"
+#include "MB85RS.h"
+#include "FRAMMap.h"
+#include "Bootloader.h"
 
 #define RESET_SERVICE           19
 #define RESET_ERROR              0
@@ -39,9 +42,12 @@ class ResetService: public Service
      uint32_t csStatus = 0;
      uint32_t csFaults = 0;
 
+     bool hasFram = false;
+     MB85RS *fram = 0;
 
  public:
      ResetService( const unsigned long port, const unsigned long pin );
+     ResetService( const unsigned long port, const unsigned long pin, MB85RS* fram );
      virtual bool process( DataMessage &command, DataMessage &workingBbuffer );
      void init();
      uint32_t getResetStatus();

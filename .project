@@ -3,7 +3,9 @@
 	<name>DelfiPQcore</name>
 	<comment></comment>
 	<projects>
+		<project>DSPI</project>
 		<project>DWire</project>
+		<project>MB85RS</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>
