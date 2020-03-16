@@ -8,16 +8,19 @@
 #ifndef PERIODICTASKNOTIFIER_H_
 #define PERIODICTASKNOTIFIER_H_
 
-#include "Task.h"
+#define MAX_PERIODIC_TASKS 50
+
+#include "PeriodicTask.h"
 
 class PeriodicTaskNotifier
 {
 private:
-    Task** taskList;
+    PeriodicTask** taskList;
     int numberOfTasks;
+    int taskCounter[MAX_PERIODIC_TASKS] = {0};
 
 public:
-    PeriodicTaskNotifier(int count, Task** taskListIn, int nrOfTasks );
+    PeriodicTaskNotifier(PeriodicTask** taskListIn, int nrOfTasks );
     void NotifyTasks();
 };
 
