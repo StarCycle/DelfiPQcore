@@ -12,11 +12,6 @@ bool CheckResetSRC(uint32_t Code, uint32_t SRC){
     return ((Code & SRC) == SRC);
 }
 
-HWMonitor *HWMonitorStub;
-void ADC14InterruptStub(){
-    HWMonitorStub->MCUMeasurementReady();
-}
-
 HWMonitor::HWMonitor(MB85RS* fram_in){
     HWMonitorStub = this;
 
@@ -63,16 +58,6 @@ HWMonitor::HWMonitor(MB85RS* fram_in){
     calDifference = cal85 - cal30;
 }
 
-void HWMonitor::MCUMeasurementReady(){
-    serial.println("Automatic ADC14 Trigger!");
-    uint64_t interruptStatus = MAP_ADC14_getEnabledInterruptStatus();
-    MAP_ADC14_clearInterruptFlag(interruptStatus);
-
-    if (interruptStatus & ADC_INT22){
-        uint16_t conRes = 10 * ((MAP_ADC14_getResult(ADC_MEM0) - cal30) * 55);
-        this->MCUTemp = ((conRes / (10*calDifference)) + 300.0f);
-    }
-}
 void HWMonitor::readResetStatus(){
     //Get and Clear ResetRegisters
     serial.println("========== HWMonitor: Reboot Cause ==========");

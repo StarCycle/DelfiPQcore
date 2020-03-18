@@ -26,7 +26,6 @@ class HWMonitor
      uint32_t cal85;
      volatile float calDifference;
 
-     bool MCUTempReady = 0;
      uint16_t MCUTemp = 0;
 
 
@@ -39,11 +38,8 @@ class HWMonitor
      void readCSStatus();
      void readMCUTemp();
 
-     void MCUMeasurementReady();
-
      uint32_t getResetStatus();
      uint32_t getCSStatus();
-     //bool MCUTempReady();
      uint16_t getMCUTemp();
 
 };
