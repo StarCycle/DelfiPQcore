@@ -35,10 +35,10 @@ HWMonitor::HWMonitor(MB85RS* fram_in){
     MAP_ADC14_setSampleHoldTime(ADC_PULSE_WIDTH_192,ADC_PULSE_WIDTH_192);
 
     /* Enabling sample timer in auto iteration mode and interrupts*/
-//    MAP_ADC14_enableSampleTimer(ADC_AUTOMATIC_ITERATION);
-    MAP_ADC14_enableSampleTimer(ADC_MANUAL_ITERATION);
+    MAP_ADC14_enableSampleTimer(ADC_AUTOMATIC_ITERATION);
+//    MAP_ADC14_enableSampleTimer(ADC_MANUAL_ITERATION);
 //    MAP_ADC14_registerInterrupt(ADC14InterruptStub);
-    MAP_ADC14_enableInterrupt(ADC_INT22);
+//    MAP_ADC14_enableInterrupt(ADC_INT22);
 
 //    MAP_Interrupt_enableInterrupt(INT_ADC14);
 //    MAP_Interrupt_enableMaster();
@@ -46,7 +46,7 @@ HWMonitor::HWMonitor(MB85RS* fram_in){
 
     /* Triggering the start of the sample */
     MAP_ADC14_enableConversion();
-//    MAP_ADC14_toggleConversionTrigger();
+    MAP_ADC14_toggleConversionTrigger();
 
 
     cal30 = MAP_SysCtl_getTempCalibrationConstant(SYSCTL_2_5V_REF,
@@ -192,17 +192,17 @@ void HWMonitor::readCSStatus(){
     serial.println("=============================================");
 }
 
-void HWMonitor::readMCUTemp(){
-    MAP_ADC14_toggleConversionTrigger();
-
-    //wait for measurement
-    while(!(MAP_ADC14_getEnabledInterruptStatus() & ADC_INT22));
-    MAP_ADC14_clearInterruptFlag(ADC_INT22);
-
-    uint16_t conRes = 10 * ((MAP_ADC14_getResult(ADC_MEM0) - cal30) * 55);
-    this->MCUTemp = ((conRes / (10*calDifference)) + 300.0f);
-
-}
+//void HWMonitor::readMCUTemp(){
+//    MAP_ADC14_toggleConversionTrigger();
+//
+//    //wait for measurement
+//    while(!(MAP_ADC14_getEnabledInterruptStatus() & ADC_INT22));
+//    MAP_ADC14_clearInterruptFlag(ADC_INT22);
+//
+//    uint16_t conRes = 10 * ((MAP_ADC14_getResult(ADC_MEM0) - cal30) * 55);
+//    this->MCUTemp = ((conRes / (10*calDifference)) + 300.0f);
+//
+//}
 
 uint32_t HWMonitor::getResetStatus(){
     return resetStatus;
@@ -213,5 +213,8 @@ uint32_t HWMonitor::getCSStatus(){
 }
 
 uint16_t HWMonitor::getMCUTemp(){
+    uint16_t conRes = 10 * ((MAP_ADC14_getResult(ADC_MEM22) - cal30) * 55);
+    this->MCUTemp = ((conRes / (10*calDifference)) + 300.0f);
+
     return MCUTemp;
 }
