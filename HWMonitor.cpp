@@ -13,8 +13,6 @@ bool CheckResetSRC(uint32_t Code, uint32_t SRC){
 }
 
 HWMonitor::HWMonitor(MB85RS* fram_in){
-    HWMonitorStub = this;
-
     this->fram = fram_in;
     /* Setting reference voltage to 2.5  and enabling reference */
     MAP_REF_A_setReferenceVoltage(REF_A_VREF2_5V);
