@@ -42,13 +42,11 @@ void ADCManager::enableTempMeasurement(){
 }
 
 uint16_t ADCManager::getTempMeasurement(){
-    serial.println(NrOfActiveADC, DEC);
     return MAP_ADC14_getResult(ADC_MEM0);
 }
 
 void ADCManager::executeADC(){
     MAP_ADC14_disableConversion();
-    serial.println(NrOfActiveADC, DEC);
     switch(NrOfActiveADC){
         case 0:
             return;
