@@ -14,6 +14,7 @@
 #include "FRAMMap.h"
 #include "DSerial.h"
 #include "Bootloader.h"
+#include "ADCManager.h"
 
 class HWMonitor
 {

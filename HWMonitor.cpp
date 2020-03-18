@@ -14,46 +14,19 @@ bool CheckResetSRC(uint32_t Code, uint32_t SRC){
 
 HWMonitor::HWMonitor(MB85RS* fram_in){
     this->fram = fram_in;
-    /* Setting reference voltage to 2.5  and enabling reference */
-    MAP_REF_A_setReferenceVoltage(REF_A_VREF2_5V);
-    MAP_REF_A_enableReferenceVoltage();
-    MAP_REF_A_enableTempSensor();
-
-    /* Initializing ADC (MCLK/1/1) with internal TEMPSENSEMAP */
-    MAP_ADC14_enableModule();
-    MAP_ADC14_initModule(ADC_CLOCKSOURCE_MCLK, ADC_PREDIVIDER_64, ADC_DIVIDER_8, ADC_TEMPSENSEMAP);
-
     /* Enabling the FPU with stacking enabled (for use within ISR) */
     MAP_FPU_enableModule();
     MAP_FPU_enableLazyStacking();
-
-    /* Configuring ADC Memory (ADC_MEM22 A22 (Temperature Sensor) in repeat ) */
-    MAP_ADC14_configureSingleSampleMode(ADC_MEM22, true);
-    MAP_ADC14_configureConversionMemory(ADC_MEM22, ADC_VREFPOS_AVCC_VREFNEG_VSS, ADC_INPUT_A22, false);
-
-    /* Set Sample hold-time */
-    MAP_ADC14_setSampleHoldTime(ADC_PULSE_WIDTH_192,ADC_PULSE_WIDTH_192);
-
-    /* Enabling sample timer in auto iteration mode and interrupts*/
-    MAP_ADC14_enableSampleTimer(ADC_AUTOMATIC_ITERATION);
-//    MAP_ADC14_enableSampleTimer(ADC_MANUAL_ITERATION);
-//    MAP_ADC14_registerInterrupt(ADC14InterruptStub);
-//    MAP_ADC14_enableInterrupt(ADC_INT22);
-
-//    MAP_Interrupt_enableInterrupt(INT_ADC14);
-//    MAP_Interrupt_enableMaster();
-
-
-    /* Triggering the start of the sample */
-    MAP_ADC14_enableConversion();
-    MAP_ADC14_toggleConversionTrigger();
-
 
     cal30 = MAP_SysCtl_getTempCalibrationConstant(SYSCTL_2_5V_REF,
             SYSCTL_30_DEGREES_C);
     cal85 = MAP_SysCtl_getTempCalibrationConstant(SYSCTL_2_5V_REF,
             SYSCTL_85_DEGREES_C);
     calDifference = cal85 - cal30;
+}
+
+void HWMonitor::readMCUTemp(){
+    ADCManager::enableTempMeasurement();
 }
 
 void HWMonitor::readResetStatus(){
@@ -213,7 +186,7 @@ uint32_t HWMonitor::getCSStatus(){
 }
 
 uint16_t HWMonitor::getMCUTemp(){
-    uint16_t conRes = 10 * ((MAP_ADC14_getResult(ADC_MEM22) - cal30) * 55);
+    uint16_t conRes = 10 * ((ADCManager::getTempMeasurement() - cal30) * 55);
     this->MCUTemp = ((conRes / (10*calDifference)) + 300.0f);
 
     return MCUTemp;
