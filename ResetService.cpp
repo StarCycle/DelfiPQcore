@@ -16,11 +16,6 @@ void _forceSoftReset(){
     resetServiceStub->forceSoftReset();
 }
 
-
-bool CheckResetSRC(uint32_t Code, uint32_t SRC){
-    return ((Code & SRC) == SRC);
-}
-
 /**
  *
  *   Reset device, triggered by WatchDog interrupt (time-out)
@@ -65,9 +60,8 @@ ResetService::ResetService(const unsigned long WDport, const unsigned long WDpin
 }
 
 ResetService::ResetService(const unsigned long WDport, const unsigned long WDpin, MB85RS* fram_in) :
-        WDIPort(WDport), WDIPin(WDpin), fram(fram_in) {
+        WDIPort(WDport), WDIPin(WDpin){
     resetServiceStub = this;
-    this->hasFram = true;
 }
 
 
@@ -97,267 +91,13 @@ void ResetService::init()
     // start the timer
     MAP_WDT_A_startTimer();
 
-    //get ResetStatus
-    readResetStatus();
-    readCSStatus();
+//    //get ResetStatus
+//    readResetStatus();
+//    readCSStatus();
+    //Superseded by HWMonitor
 
 }
 
-void ResetService::readResetStatus(){
-
-    //Get and Clear ResetRegisters
-    serial.println("========= ResetService Reboot Cause =========");
-    this->resetStatus  = (RSTCTL->HARDRESET_STAT   & 0x0F) | ((RSTCTL->HARDRESET_STAT & 0xC000) >> 10);
-    this->resetStatus |= (RSTCTL->SOFTRESET_STAT   & 0x07) << 6;
-    this->resetStatus |= (RSTCTL->PSSRESET_STAT    & 0x0E) << 8;
-    this->resetStatus |= (RSTCTL->PCMRESET_STAT    & 0x03) << 12;
-    this->resetStatus |= (RSTCTL->PINRESET_STAT    & 0x01) << 14;
-    this->resetStatus |= (RSTCTL->REBOOTRESET_STAT & 0x01) << 15;
-    this->resetStatus |= (RSTCTL->CSRESET_STAT     & 0x01) << 16;
-    MAP_ResetCtl_clearHardResetSource(((uint32_t) 0x0000FFFF));
-    MAP_ResetCtl_clearSoftResetSource(((uint32_t) 0x0000FFFF));
-    MAP_ResetCtl_clearPSSFlags();
-    MAP_ResetCtl_clearPCMFlags();
-    RSTCTL->PINRESET_CLR |= (uint32_t) 0x01;
-    RSTCTL->REBOOTRESET_CLR |= (uint32_t) 0x01;
-    RSTCTL->CSRESET_CLR |= (uint32_t) 0x01;
-
-    serial.print("RESET STATUS: ");
-    serial.print(resetStatus, HEX);
-    serial.println("");
-
-    if( CheckResetSRC(resetStatus, RESET_HARD_SYSTEMREQ)){
-        serial.println("- POR Caused by System Reset Output of Cortex-M4");
-    }
-    if( CheckResetSRC(resetStatus, RESET_HARD_WDTTIME)){
-        serial.println("- POR Caused by HardReset WDT Timer expiration!");
-    }
-    if( CheckResetSRC(resetStatus, RESET_HARD_WDTPW_SRC)){
-        serial.println("- POR Caused by HardReset WDT Wrong Password!");
-    }
-    if( CheckResetSRC(resetStatus, RESET_HARD_FCTL)){
-        serial.println("- POR Caused by FCTL detecting a voltage Anomaly!");
-    }
-    if( CheckResetSRC(resetStatus, RESET_HARD_CS)){
-        serial.println("- POR Extended for Clock Settle!");
-    }
-    if( CheckResetSRC(resetStatus, RESET_HARD_PCM) ){
-        serial.println("- POR Extended for Power Settle!");
-    }
-    if( CheckResetSRC(resetStatus, RESET_SOFT_CPULOCKUP) ){
-        serial.println("- POR Caused by CPU Lock-up!");
-    }
-    if( CheckResetSRC(resetStatus, RESET_SOFT_WDTTIME) ){
-        serial.println("- POR Caused by SoftReset WDT Timer expiration!!");
-    }
-    if( CheckResetSRC(resetStatus, RESET_SOFT_WDTPW_SRC) ){
-        serial.println("- POR Caused by SoftReset WDT Wrong Password!");
-    }
-    if( CheckResetSRC(resetStatus, RESET_PSS_VCCDET) ){
-        serial.println("- POR Caused by VCC Detector trip condition!");
-    }
-    if( CheckResetSRC(resetStatus, RESET_PSS_SVSH_TRIP) ){
-        serial.println("- POR Caused by Supply Supervisor detected Vcc trip condition!");
-    }
-    if( CheckResetSRC(resetStatus, RESET_PSS_BGREF_BAD) ){
-        serial.println("- POR Caused by Bad Band Gap Reference!");
-    }
-    if( CheckResetSRC(resetStatus, RESET_PCM_LPM35) ){
-        serial.println("- POR Caused by PCM due to exit from LPM3.5!");
-    }
-    if( CheckResetSRC(resetStatus, RESET_PCM_LPM45) ){
-        serial.println("- POR Caused by PCM due to exit from LPM4.5!");
-    }
-    if( CheckResetSRC(resetStatus, RESET_PIN_NMI) ){
-        serial.println("- POR Caused by NMI Pin based event!");
-    }
-    if( CheckResetSRC(resetStatus, RESET_REBOOT) ){
-        serial.println("- POR Caused by SysCTL Reboot!");
-    }
-    if( CheckResetSRC(resetStatus, RESET_CSRESET_DCOSHORT)){
-        serial.println("- POR Caused by DCO short circuit fault in external resistor!");
-    }
-
-    if(hasFram){
-        if(fram->ping()){
-            serial.println("+ FRAM present");
-            this->fram->write(FRAM_RESET_CAUSE, &((uint8_t*)&resetStatus)[1], 3);
-            uint8_t resetCounter = 0;
-            fram->read(FRAM_RESET_COUNTER + Bootloader::getCurrentSlot(), &resetCounter, 1);
-            if(!CheckResetSRC(resetStatus, RESET_REBOOT)){
-                serial.println("+ Unintentional reset!");
-                resetCounter++;
-                fram->write(FRAM_RESET_COUNTER + Bootloader::getCurrentSlot(), &resetCounter, 1);
-            }else{
-                serial.println("+ Intentional reset");
-                resetCounter = 0;
-                fram->write(FRAM_RESET_COUNTER + Bootloader::getCurrentSlot(), &resetCounter, 1);
-            }
-            serial.print("+ Reset counter at: ");
-            serial.println(resetCounter, DEC);
-        }else{
-            serial.println("# FRAM unavailable");
-        }
-    }
-
-    serial.println("=============================================");
-}
-
-void ResetService::readCSStatus(){
-    //Get and Clear Clock Status
-    // CLOCK ENABLED/DISABLED STATUS:
-//    serial.println("========= ResetService Clock Status =========");
-//    this->csStatus  = CS->STAT;
-//
-//    serial.print("CS STATUS: ");
-//    serial.print(csStatus, HEX);
-//    serial.println("");
-//
-//    if( CheckResetSRC(csStatus, CS_STAT_DCO_ON)){
-//        serial.println("- DCO Active");
-//    }else{
-//        serial.println("- DCO Inactive");
-//    }
-//    if( CheckResetSRC(csStatus, CS_STAT_DCOBIAS_ON)){
-//        serial.println("- DCO Bias Active");
-//    }else{
-//        serial.println("- DCO Bias Inactive");
-//    }
-//    if( CheckResetSRC(csStatus, CS_STAT_HFXT_ON)){
-//        serial.println("- HFXT Active");
-//    }else{
-//        serial.println("- HFXT Inactive");
-//    }
-//    if( CheckResetSRC(csStatus, CS_STAT_MODOSC_ON)){
-//        serial.println("- MODOSC Active");
-//    }else{
-//        serial.println("- MODOSC Inactive");
-//    }
-//    if( CheckResetSRC(csStatus, CS_STAT_VLO_ON)){
-//        serial.println("- VLO Active");
-//    }else{
-//        serial.println("- VLO Inactive");
-//    }
-//    if( CheckResetSRC(csStatus, CS_STAT_LFXT_ON) ){
-//        serial.println("- LFXT Active");
-//    }else{
-//        serial.println("- LFXT Inactive");
-//    }
-//    if( CheckResetSRC(csStatus, CS_STAT_REFO_ON) ){
-//        serial.println("- REFO Active");
-//    }else{
-//        serial.println("- REFO Inactive");
-//    }
-//    if( CheckResetSRC(csStatus, CS_STAT_ACLK_ON) ){
-//            serial.println("- ACLK Active");
-//    }else{
-//        serial.println("- ACLK Inactive");
-//    }
-//    if( CheckResetSRC(csStatus, CS_STAT_MCLK_ON) ){
-//            serial.println("- MCLK Active");
-//    }else{
-//        serial.println("- MCLK Inactive");
-//    }
-//    if( CheckResetSRC(csStatus, CS_STAT_HSMCLK_ON) ){
-//            serial.println("- HSMCLK Active");
-//    }else{
-//        serial.println("- HSMCLK Inactive");
-//    }
-//    if( CheckResetSRC(csStatus, CS_STAT_SMCLK_ON) ){
-//            serial.println("- SMCLK Active");
-//    }else{
-//        serial.println("- SMCLK Inactive");
-//    }
-//    if( CheckResetSRC(csStatus, CS_STAT_MODCLK_ON) ){
-//            serial.println("- MODCLK Active");
-//    }else{
-//        serial.println("- MODCLK Inactive");
-//    }
-//    if( CheckResetSRC(csStatus, CS_STAT_VLOCLK_ON) ){
-//            serial.println("- VLOCLK Active");
-//    }else{
-//        serial.println("- VLOCLK Inactive");
-//    }
-//    if( CheckResetSRC(csStatus, CS_STAT_LFXTCLK_ON) ){
-//            serial.println("- LFXTCLK Active");
-//    }else{
-//        serial.println("- LFXTCLK Inactive");
-//    }
-//    if( CheckResetSRC(csStatus, CS_STAT_REFOCLK_ON) ){
-//            serial.println("- REFOCLK Active");
-//    }else{
-//        serial.println("- REFOCLK Inactive");
-//    }
-//    if( CheckResetSRC(csStatus, CS_STAT_ACLK_READY) ){
-//            serial.println("- ACLK Ready");
-//    }else{
-//        serial.println("- ACLK NOT Ready");
-//    }
-//    if( CheckResetSRC(csStatus, CS_STAT_MCLK_READY) ){
-//            serial.println("- MCLK Ready");
-//    }else{
-//        serial.println("- MCLK NOT Ready");
-//    }
-//    if( CheckResetSRC(csStatus, CS_STAT_HSMCLK_READY) ){
-//            serial.println("- HSMCLK Ready");
-//    }else{
-//        serial.println("- HSMCLK NOT Ready");
-//    }
-//    if( CheckResetSRC(csStatus, CS_STAT_SMCLK_READY) ){
-//            serial.println("- SMCLK Ready");
-//    }else{
-//        serial.println("- SMCLK NOT Ready");
-//    }
-//    if( CheckResetSRC(csStatus, CS_STAT_BCLK_READY) ){
-//        serial.println("- BCLK Ready");
-//    }else{
-//        serial.println("- BCLK NOT Ready");
-//    }
-
-    CS->CLRIFG |= CS_CLRIFG_CLR_LFXTIFG;
-    CS->CLRIFG |= CS_CLRIFG_CLR_HFXTIFG;
-    CS->CLRIFG |= CS_CLRIFG_CLR_DCOR_OPNIFG;
-    CS->CLRIFG |= CS_CLRIFG_CLR_FCNTLFIFG;
-    CS->CLRIFG |= CS_CLRIFG_CLR_FCNTHFIFG;
-    CS->CLRIFG |= CS_SETIFG_SET_LFXTIFG;
-
-    //Get and clear CLOCK FAULT STATUS
-    serial.println("========= ResetService Clock Faults =========");
-    this->csFaults  = CS->IFG;
-
-    serial.print("CS FAULTS: ");
-    serial.print(csFaults, HEX);
-    serial.println("");
-
-    if( CheckResetSRC(csFaults, CS_IFG_LFXTIFG)){
-        serial.println("- Fault in LFXT");
-    }
-    if( CheckResetSRC(csFaults, CS_IFG_HFXTIFG)){
-        serial.println("- Fault in HFXT");
-    }
-    if( CheckResetSRC(csFaults, CS_IFG_DCOR_SHTIFG)){
-        serial.println("- DCO Short Circuit!");
-    }
-    if( CheckResetSRC(csFaults, CS_IFG_DCOR_OPNIFG)){
-        serial.println("- DCO Open Circuit!");
-    }
-    if( CheckResetSRC(csFaults, CS_IFG_FCNTLFIFG)){
-        serial.println("- LFXT Start-count expired!");
-    }
-    if( CheckResetSRC(csFaults, CS_IFG_FCNTHFIFG)){
-        serial.println("- HFXT Start-count expired!");
-    }
-
-    CS->CLRIFG |= CS_CLRIFG_CLR_LFXTIFG;
-    CS->CLRIFG |= CS_CLRIFG_CLR_HFXTIFG;
-    CS->CLRIFG |= CS_CLRIFG_CLR_DCOR_OPNIFG;
-    CS->CLRIFG |= CS_CLRIFG_CLR_FCNTLFIFG;
-    CS->CLRIFG |= CS_CLRIFG_CLR_FCNTHFIFG;
-    CS->CLRIFG |= CS_SETIFG_SET_LFXTIFG;
-
-
-    serial.println("=============================================");
-}
 
 /**
  *
@@ -553,6 +293,3 @@ void ResetService::forceSoftReset()
     MAP_SysCtl_rebootDevice();
 }
 
-uint32_t ResetService::getResetStatus(){
-    return this->resetStatus;
-}
