@@ -22,7 +22,7 @@ private:
 public:
     static void initADC();
     static void enableTempMeasurement();
-    static uint16_t getTempMeasurement();
+    static float getTempMeasurement();
     static void executeADC();
 };
 

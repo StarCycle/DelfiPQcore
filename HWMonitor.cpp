@@ -14,15 +14,6 @@ bool CheckResetSRC(uint32_t Code, uint32_t SRC){
 
 HWMonitor::HWMonitor(MB85RS* fram_in){
     this->fram = fram_in;
-    /* Enabling the FPU with stacking enabled (for use within ISR) */
-    MAP_FPU_enableModule();
-    MAP_FPU_enableLazyStacking();
-
-    cal30 = MAP_SysCtl_getTempCalibrationConstant(SYSCTL_2_5V_REF,
-            SYSCTL_30_DEGREES_C);
-    cal85 = MAP_SysCtl_getTempCalibrationConstant(SYSCTL_2_5V_REF,
-            SYSCTL_85_DEGREES_C);
-    calDifference = cal85 - cal30;
 }
 
 void HWMonitor::readMCUTemp(){
@@ -186,8 +177,7 @@ uint32_t HWMonitor::getCSStatus(){
 }
 
 uint16_t HWMonitor::getMCUTemp(){
-    uint16_t conRes = 10 * ((ADCManager::getTempMeasurement() - cal30) * 55);
-    this->MCUTemp = ((conRes / (10*calDifference)) + 300.0f);
+    this->MCUTemp = 10*ADCManager::getTempMeasurement();
 
     return MCUTemp;
 }
