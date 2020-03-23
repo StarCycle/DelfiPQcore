@@ -20,7 +20,7 @@ private:
  protected:
     volatile bool execute = false;
     void (*userFunction)( void );
-    void (*initializer)( void );
+    void (*initializerFunction)( void );
 
     virtual void run();
 
