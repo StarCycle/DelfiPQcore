@@ -7,34 +7,43 @@
 
 #include "PeriodicTaskNotifier.h"
 
+#define TASKNOTIFIER_PERIOD  48000000 / 10 //amount of counts for 0.1 seconds
+
+
 PeriodicTaskNotifier *notifierStub;
 
 void NotifyTasks_stub(){
-    //Temporary Fix for WDT Kicking too fast
-    MAP_Timer32_clearInterruptFlag(TIMER32_0_BASE);
+    //systick interrupt clears automatically.
     notifierStub->NotifyTasks();
 };
 
-PeriodicTaskNotifier::PeriodicTaskNotifier(int count, Task** taskListIn, int nrOfTasks ) :
+PeriodicTaskNotifier::PeriodicTaskNotifier(PeriodicTask** taskListIn, int nrOfTasks ) :
     taskList(taskListIn), numberOfTasks(nrOfTasks){
     notifierStub = this;
-//    MAP_SysTick_enableModule();
-//    MAP_SysTick_setPeriod(count);  << TODO: count is only 24-bits
-//    MAP_SysTick_registerInterrupt(&NotifyTasks_stub);
-//    MAP_SysTick_enableInterrupt();
 
-    //Temporary Fix for WDT Kicking too fast
-    MAP_Timer32_initModule(TIMER32_0_BASE, TIMER32_PRESCALER_1, TIMER32_32BIT,
-                TIMER32_PERIODIC_MODE);
-    MAP_Timer32_registerInterrupt(TIMER32_0_INTERRUPT, &NotifyTasks_stub);
-    MAP_Timer32_setCount(TIMER32_0_BASE, count);
-    MAP_Timer32_startTimer(TIMER32_0_BASE, false);
+    uint32_t count = TASKNOTIFIER_PERIOD;
+    static_assert( ((unsigned char) (TASKNOTIFIER_PERIOD >> 24) ) == 0, "PeriodicTaskNotifier Period is only 24 bits!" ); //(assert this is less than 24 bits)
+
+    MAP_SysTick_enableModule();
+    MAP_SysTick_setPeriod(count);  // count is only 24-bits
+    MAP_SysTick_registerInterrupt(NotifyTasks_stub);
+    MAP_SysTick_enableInterrupt();
+
+    //clear the counter list
+//    for(int k = 0; k < numberOfTasks; k++){
+//        this->taskCounter[k] = 0;
+//    }
+
 };
 
 
 void PeriodicTaskNotifier::NotifyTasks(){
     for(int k = 0; k < numberOfTasks; k++){
-        taskList[k]->notify();
+        this->taskCounter[k] += 1;
+        if(this->taskCounter[k] % this->taskList[k]->taskCount == 0){
+            this->taskCounter[k] = 0;
+            taskList[k]->notify();
+        }
     }
 }
 
