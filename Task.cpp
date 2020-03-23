@@ -9,34 +9,34 @@
 
 /**
  *
- *   Task Constructor: take an external function and initializer
+ *   Task Constructor: take a user and initializer functions
  *
  *   Parameters:
- *   void (*function)           Function called by Task
- *   void (*init)               Function to initialize Task
+ *   void (*userFunction)           User function called by the task
+ *   void (*initializerFunction)    Initializer function to initialize the task
  *
  *   Returns:
  *
  */
 Task::Task( void (*function)( void ), void (*init)( void ) ) :
-            userFunction( function ), initializer( init ) {}
+            userFunction( function ), initializerFunction( init ) {}
 
 /**
  *
- *   Task Constructor: take an external function
+ *   Task Constructor: take a user function
  *
  *   Parameters:
- *   void (*function)           Function called by Task (no initializer)
+ *   void (*userFunction)          User function called by the task
  *
  *   Returns:
  *
  */
 Task::Task( void (*function)( void )) :
-            userFunction( function ), initializer( 0 ) {}
+            userFunction( function ), initializerFunction( 0 ) {}
 
 /**
  *
- *   Task Constructor: the task function and the initializer
+ *   Task Constructor: the user and the initializer functions
  *   should be inherited from Task.h
  *
  *   Parameters:
@@ -44,7 +44,7 @@ Task::Task( void (*function)( void )) :
  *   Returns:
  *
  */
-Task::Task( void ) : userFunction( 0 ), initializer( 0 ) {}
+Task::Task( void ) : userFunction( 0 ), initializerFunction( 0 ) {}
 
 /**
  *
@@ -124,8 +124,8 @@ void Task::run( void )
  */
 void Task::setUp( void )
 {
-    if (initializer)
+    if (initializerFunction)
     {
-        initializer();
+        initializerFunction();
     }
 }
