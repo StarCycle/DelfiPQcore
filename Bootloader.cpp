@@ -61,12 +61,16 @@ void Bootloader::JumpSlot(){
         if((current_slot & 0x7F) == 0 && (target_slot & 0x7F) != 0){ //is in main slot and preparing to 'jump'
             //check nr of Reboots to reset targetslot to 0
            uint8_t nrOfReboots = 0;
-           fram->read(FRAM_RESET_COUNTER + target_slot, &nrOfReboots, 1); //get nr 'surprise' reboots of targets
+           fram->read(FRAM_RESET_COUNTER + (target_slot & 0x7F), &nrOfReboots, 1); //get nr 'surprise' reboots of targets
+           serial.print("= Target: ");
+           serial.println((target_slot & 0x7F),DEC);
+           serial.print("= Number of Reboots Target: ");
+           serial.println(nrOfReboots, DEC);
            if(nrOfReboots > 10 && ((target_slot & 0x7F) != 0)){ //if the surprise reboots >10, reset boot target and reset reboot counter
                serial.println("# Max amount of unintentional reboots!");
                serial.println("# Resetting TargetSlot");
                nrOfReboots = 0;
-               fram->write(FRAM_RESET_COUNTER, &nrOfReboots, 1);
+               fram->write(FRAM_RESET_COUNTER + (target_slot & 0x7F), &nrOfReboots, 1);
                fram->write(BOOTLOADER_TARGET_REG, &current_slot, 1); //reset target to slot0
                fram->read(BOOTLOADER_TARGET_REG, &target_slot, 1);
            }
@@ -122,10 +126,17 @@ void Bootloader::JumpSlot(){
                         MAP_SysCtl_rebootDevice();
                         break;
                 }
+                serial.print("Jumping to: ");
+                serial.println(*resetPtr, HEX);
                 serial.println("=============================================");
+
                 void (*slotPtr)(void) = (void (*)())(*resetPtr);
+
                 slotPtr();  //This is the jump!
-                while(1); //should never end up here
+
+                while(1){
+                    serial.println("Why are we here?"); //should never end up here
+                }
             }else{
                 //not jumping anymore
                 serial.println("=============================================");
