@@ -98,6 +98,8 @@ void HWMonitor::readResetStatus(){
         serial.println("+ FRAM present");
         this->fram->write(FRAM_RESET_CAUSE, &((uint8_t*)&resetStatus)[1], 3);
         uint8_t resetCounter = 0;
+        serial.print("+ Current Slot: ");
+        serial.println(Bootloader::getCurrentSlot(),DEC);
         fram->read(FRAM_RESET_COUNTER + Bootloader::getCurrentSlot(), &resetCounter, 1);
         if(!CheckResetSRC(resetStatus, RESET_REBOOT)){
             serial.println("+ Unintentional reset!");
