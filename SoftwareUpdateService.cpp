@@ -83,7 +83,7 @@ bool SoftwareUpdateService::process(DataMessage &command, DataMessage &workingBu
                     }else{
                         startOTA(command.getPayload()[COMMAND_DATA], false);
                     }
-                    if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) serial.println("\nOTA started!");
+                    if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) serial.println("OTA started!");
 
                 } else throw_error(SLOT_OUT_OF_RANGE);
             } else throw_error(PARAMETER_MISMATCH);
@@ -92,7 +92,7 @@ bool SoftwareUpdateService::process(DataMessage &command, DataMessage &workingBu
         case SET_METADATA:
             if(command.getSize() == METADATA_SIZE - 1 + PAYLOAD_SIZE_OFFSET) {
                 setMetadata(&(command.getPayload()[COMMAND_DATA]));
-                if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) serial.println("\nMetadata received!");
+                if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) serial.println("Metadata received!");
 
             } else throw_error(PARAMETER_MISMATCH);
             break;
@@ -103,7 +103,7 @@ bool SoftwareUpdateService::process(DataMessage &command, DataMessage &workingBu
                     getMetadata(command.getPayload()[COMMAND_DATA] - 1);
                     if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) {
                         print_metadata(&payload_data[COMMAND_DATA]);
-                        serial.println("\nMetadata sended!");
+                        serial.println("Metadata sended!");
                     }
                 } else throw_error(SLOT_OUT_OF_RANGE);
             } else throw_error(PARAMETER_MISMATCH);
@@ -118,14 +118,15 @@ bool SoftwareUpdateService::process(DataMessage &command, DataMessage &workingBu
 //                serial.print("CRC OFFSET: ");
 //                serial.println(command.getPayload()[COMMAND_DATA] | (command.getPayload()[COMMAND_DATA + 1] << 8), DEC);
                 setPartialCRCs(&(command.getPayload()[COMMAND_DATA+2]), command.getSize() - (PAYLOAD_SIZE_OFFSET+2), command.getPayload()[COMMAND_DATA] | (command.getPayload()[COMMAND_DATA + 1] << 8));
-                if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) serial.println("\nPartial crc block received!");
+                if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) serial.println("CRC!");
             } else throw_error(PARAMETER_MISMATCH);
             break;
 
         case SET_BLOCK:
             if(command.getSize() <= BLOCK_SIZE + 2 + PAYLOAD_SIZE_OFFSET) {
+                serial.println("BLOCK!");
                 setBlock(&(command.getPayload()[COMMAND_DATA + 2]), command.getPayload()[COMMAND_DATA] | (command.getPayload()[COMMAND_DATA + 1] << 8));
-                if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) serial.println("\nBlock received!");
+                if(payload_data[COMMAND_RESPONSE] == COMMAND_ERROR) serial.println("ERROR!");
             } else throw_error(PARAMETER_MISMATCH);
             break;
 
@@ -133,7 +134,7 @@ bool SoftwareUpdateService::process(DataMessage &command, DataMessage &workingBu
             if(command.getSize() == PAYLOAD_SIZE_OFFSET + 1) {
                 if(command.getPayload()[COMMAND_DATA] == 1 || command.getPayload()[COMMAND_DATA] == 2) {
                     checkMD5(command.getPayload()[COMMAND_DATA]);
-                    if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) serial.println("\nMD5 is correct!");
+                    if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) serial.println("MD5 is correct!");
                 } else throw_error(SLOT_OUT_OF_RANGE);
             } else throw_error(PARAMETER_MISMATCH);
             break;
@@ -141,7 +142,7 @@ bool SoftwareUpdateService::process(DataMessage &command, DataMessage &workingBu
         case STOP_OTA:
             if(command.getSize() == PAYLOAD_SIZE_OFFSET) {
                 stopOTA();
-                if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) serial.println("\nOTA is stopped!");
+                if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) serial.println("OTA is stopped!");
             } else throw_error(PARAMETER_MISMATCH);
             break;
 
@@ -156,7 +157,7 @@ bool SoftwareUpdateService::process(DataMessage &command, DataMessage &workingBu
                 } else {
                     if(command.getPayload()[COMMAND_DATA] == ACKNOWLEDGE) {
                         eraseSlot(slot_erase);
-                        if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) serial.println("\nSlot is erased!");
+                        if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) serial.println("Slot is erased!");
                     } else throw_error(PARAMETER_MISMATCH);
                 }
             } else throw_error(PARAMETER_MISMATCH);
@@ -165,7 +166,7 @@ bool SoftwareUpdateService::process(DataMessage &command, DataMessage &workingBu
             if(command.getSize() == PAYLOAD_SIZE_OFFSET + 2) {
                 if(command.getPayload()[COMMAND_DATA] < 3) {
                     setBootSlot(command.getPayload()[COMMAND_DATA], command.getPayload()[COMMAND_DATA + 1]);
-                    if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) serial.println("\nSlot code executed successfully!");
+                    if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) serial.println("Slot code executed successfully!");
                 } else throw_error(SLOT_OUT_OF_RANGE);
             } else throw_error(PARAMETER_MISMATCH);
             break;
@@ -259,8 +260,8 @@ void SoftwareUpdateService::startOTA(unsigned char slot_number, bool allow_resum
                 }
 
                 //initialize the checklists with zeros
-                for(int i = 0; i < (MAX_BLOCK_AMOUNT/BYTE_SIZE); i++) crc_received[i] = 0;
-                for(int i = 0; i < (MAX_BLOCK_AMOUNT/BYTE_SIZE); i++) blocks_received[i] = 0;
+                for(int i = 0; i < (MAX_BLOCK_AMOUNT/BYTE_SIZE)+1; i++) crc_received[i] = 0;
+                for(int i = 0; i < (MAX_BLOCK_AMOUNT/BYTE_SIZE)+1; i++) blocks_received[i] = 0;
                 //write the FRAM Progress checklists
                 if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
                 fram->write(UPDATE_PROGRESS_CRC, crc_received, UPDATE_PROGRESS_CHECKLIST_SIZE);
@@ -385,8 +386,8 @@ void SoftwareUpdateService::setPartialCRCs(unsigned char* crc_block, unsigned ch
                     fram->write(SLOT2_PAR_CRC + crc_offset, crc_block, num_bytes);
                 }
 
-                serial.print("Writing CRCs: ");
-                serial.println(num_bytes, DEC);
+//                serial.print("Writing CRCs: ");
+//                serial.println(num_bytes, DEC);
                 //update checklist in RAM
                 for(int k = 0; k < num_bytes; k++){
                     crc_received[(crc_offset+k) / BYTE_SIZE] |= 1 << ((crc_offset+k) % BYTE_SIZE);
@@ -394,11 +395,11 @@ void SoftwareUpdateService::setPartialCRCs(unsigned char* crc_block, unsigned ch
 
                 //write checklist changes to FRAM
                 if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
-                serial.print("Writing CRC CheckList Bytes: ");
-                serial.println(((num_bytes-1)/BYTE_SIZE) + 1, DEC);
-                for(int i = 0; i < (((num_bytes-1)/BYTE_SIZE) + 1); i++){
-                    serial.println(crc_received[(crc_offset) / BYTE_SIZE + i], DEC);
-                }
+//                serial.print("Writing CRC CheckList Bytes: ");
+//                serial.println(((num_bytes-1)/BYTE_SIZE) + 1, DEC);
+//                for(int i = 0; i < (((num_bytes-1)/BYTE_SIZE) + 1); i++){
+//                    serial.println(crc_received[(crc_offset) / BYTE_SIZE + i], DEC);
+//                }
                 fram->write(UPDATE_PROGRESS_CRC + (crc_offset / BYTE_SIZE), &crc_received[(crc_offset) / BYTE_SIZE], ((num_bytes-1)/BYTE_SIZE) + 1);
 
                 //Check if all CRCs are received
@@ -641,7 +642,8 @@ void SoftwareUpdateService::setBootSlot(unsigned char slot, bool permanent) {
         fram->write(BOOTLOADER_TARGET_REG, &target_slot, 1);
         payload_size = 2;
         payload_data[COMMAND_RESPONSE] = SERVICE_RESPONSE_REPLY;
-        this->setPostFunc([](){ MAP_SysCtl_rebootDevice();});
+        MAP_SysCtl_rebootDevice();
+        this->setPostFunc([](){ });
     } else {
         unsigned char slotFlag = 0;
         if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
@@ -661,6 +663,7 @@ void SoftwareUpdateService::setBootSlot(unsigned char slot, bool permanent) {
             fram->write(BOOTLOADER_TARGET_REG, &target_slot, 1);
             payload_size = 2;
             payload_data[COMMAND_RESPONSE] = SERVICE_RESPONSE_REPLY;
+            MAP_SysCtl_rebootDevice();
             this->setPostFunc([](){ MAP_SysCtl_rebootDevice();});
         } else return throw_error(SLOT_NOT_PROGRAMMED);
     }
