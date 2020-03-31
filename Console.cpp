@@ -50,14 +50,42 @@ void Console::init( unsigned int baudrate )
     MAP_UART_enableModule( EUSCI_A0_BASE );
 }
 
-void Console::log( const char *text )
+void Console::log( const char *text, ... )
 {
+    va_list format_args;
+    va_start(format_args, text);
+
+    //initialize string buffer for formating routines.
+    //initialize with string to make sure it has a string terminator (for strlen)
+    char str_buf[] = "0000000000";
+
     for ( int ii = 0; ii < strlen(text); ii++ )
     {
-        UART_transmitData(EUSCI_A0_BASE, text[ii]);
+        if(text[ii] == '%' && (ii+1 < strlen(text))){ //string formating detected
+            ii++;
+            switch(text[ii]) {
+                case 's': // string
+                    log_insert(va_arg(format_args, char*));
+                    break;
+                case 'c':// char
+                    UART_transmitData(EUSCI_A0_BASE, va_arg(format_args, char));
+                    break;
+                case 'd':// digit
+                    log_insert(itoa(str_buf,va_arg(format_args, int),10));
+                    break;
+                case 'x':// hexadecimal
+                    log_insert(itoa(str_buf,va_arg(format_args, int),16));
+                    break;
+                default:
+                    break;
+            }
+        }else{
+            UART_transmitData(EUSCI_A0_BASE, text[ii]);
+        }
     }
     log();
 }
+
 
 void Console::log()
 {
@@ -70,3 +98,46 @@ void Console::flush( void )
     // TODO Auto-generated constructor stub
 
 }
+
+/**** PRIVATE METHODS ****/
+
+// This method is adapted from http://stackoverflow.com/a/10011878/6399671
+char* Console::itoa(char* str, uint32_t val, uint8_t base ) {
+
+    int len = strlen(str);
+    //Create string based on base value
+    for(int i = 1; i <= len; i++) {
+        str[len - i] = (uint8_t) ((val % base));
+        if (str[len - i] > 9) {
+            str[len - i] += 'A' - 10;
+        }else{
+            str[len - i] += '0';
+        }
+        val /= base;
+    }
+
+    // Filter out all the leading zeroes
+    bool reachedStart = false;
+
+    for(int i = 0; i < len; i++) {
+        if(str[i] != '0'){
+            reachedStart = true;
+        }
+        if(reachedStart){
+            return &str[i];
+        }
+    }
+
+    //all zero string, return last char
+    return &str[len-1];
+}
+
+void Console::log_insert( const char *text )
+{
+    for ( int ii = 0; ii < strlen(text); ii++ )
+    {
+        UART_transmitData(EUSCI_A0_BASE, text[ii]);
+    }
+}
+
+

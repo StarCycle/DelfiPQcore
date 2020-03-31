@@ -9,6 +9,8 @@
 #define CONSOLE_H_
 
 #include <driverlib.h>
+#include <stdarg.h>
+
 extern "C" {
 #include<string.h>
 }
@@ -19,11 +21,13 @@ private:
 
     // Private constructor to prevent instancing.
     Console();
+    static char* itoa(char* str, uint32_t val, uint8_t base );
+    static void log_insert( const char *text );
 
 public:
 
     static void init( unsigned int baudrate );
-    static void log( const char *text );
+    static void log( const char *text, ... );
     static void log( void );
     static void flush( void );
 
