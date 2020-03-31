@@ -7,8 +7,6 @@
 
 #include "Console.h"
 
-
-
 /**** PUBLIC METHODS ****/
 void Console::init( unsigned int baudrate )
 {
@@ -50,40 +48,53 @@ void Console::init( unsigned int baudrate )
     MAP_UART_enableModule( EUSCI_A0_BASE );
 }
 
+bool Console::isEnabled()
+{
+    uint8_t status = MAP_GPIO_getInputPinValue(GPIO_PORT_P1, GPIO_PIN2);
+    if(status == GPIO_INPUT_PIN_HIGH){
+        return true;
+    }else{
+        return false;
+    }
+}
+
+
 void Console::log( const char *text, ... )
 {
-    va_list format_args;
-    va_start(format_args, text);
+    if(isEnabled()){
+        va_list format_args;
+        va_start(format_args, text);
 
-    //initialize string buffer for formating routines.
-    //initialize with string to make sure it has a string terminator (for strlen)
-    char str_buf[] = "0000000000";
+        //initialize string buffer for formating routines.
+        //initialize with string to make sure it has a string terminator (for strlen)
+        char str_buf[] = "0000000000";
 
-    for ( int ii = 0; ii < strlen(text); ii++ )
-    {
-        if(text[ii] == '%' && (ii+1 < strlen(text))){ //string formating detected
-            ii++;
-            switch(text[ii]) {
-                case 's': // string
-                    log_insert(va_arg(format_args, char*));
-                    break;
-                case 'c':// char
-                    UART_transmitData(EUSCI_A0_BASE, va_arg(format_args, char));
-                    break;
-                case 'd':// digit
-                    log_insert(itoa(str_buf,va_arg(format_args, int),10));
-                    break;
-                case 'x':// hexadecimal
-                    log_insert(itoa(str_buf,va_arg(format_args, int),16));
-                    break;
-                default:
-                    break;
+        for ( int ii = 0; ii < strlen(text); ii++ )
+        {
+            if(text[ii] == '%' && (ii+1 < strlen(text))){ //string formating detected
+                ii++;
+                switch(text[ii]) {
+                    case 's': // string
+                        log_insert(va_arg(format_args, char*));
+                        break;
+                    case 'c':// char
+                        UART_transmitData(EUSCI_A0_BASE, va_arg(format_args, char));
+                        break;
+                    case 'd':// digit
+                        log_insert(itoa(str_buf,va_arg(format_args, int),10));
+                        break;
+                    case 'x':// hexadecimal
+                        log_insert(itoa(str_buf,va_arg(format_args, int),16));
+                        break;
+                    default:
+                        break;
+                }
+            }else{
+                UART_transmitData(EUSCI_A0_BASE, text[ii]);
             }
-        }else{
-            UART_transmitData(EUSCI_A0_BASE, text[ii]);
         }
+        log();
     }
-    log();
 }
 
 

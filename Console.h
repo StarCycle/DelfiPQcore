@@ -25,7 +25,7 @@ private:
     static void log_insert( const char *text );
 
 public:
-
+    static bool isEnabled();
     static void init( unsigned int baudrate );
     static void log( const char *text, ... );
     static void log( void );
