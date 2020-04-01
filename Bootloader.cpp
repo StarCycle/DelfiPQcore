@@ -6,9 +6,6 @@
  */
 
 #include "Bootloader.h"
-#include "DSerial.h"
-
-extern DSerial serial;
 
 
 Bootloader::Bootloader(MB85RS &fram){
@@ -48,12 +45,11 @@ unsigned char Bootloader::getCurrentSlot(){
 void Bootloader::JumpSlot(){
     uint8_t target_slot = 0;
     //this->fram->write(FRAM_TARGET_SLOT, &target_slot, 1);
-    serial.println("================= BOOTLOADER ================");
+    Console::log("================= BOOTLOADER ================");
 
     current_slot = this->getCurrentSlot();
 
-    serial.print("= Current slot: ");
-    serial.println(current_slot, DEC);
+    Console::log("= Current slot: %d", (int) current_slot);
 
     if(fram->ping()){
         this->fram->read(BOOTLOADER_TARGET_REG, &target_slot, 1);
@@ -62,13 +58,11 @@ void Bootloader::JumpSlot(){
             //check nr of Reboots to reset targetslot to 0
            uint8_t nrOfReboots = 0;
            fram->read(FRAM_RESET_COUNTER + (target_slot & 0x7F), &nrOfReboots, 1); //get nr 'surprise' reboots of targets
-           serial.print("= Target: ");
-           serial.println((target_slot & 0x7F),DEC);
-           serial.print("= Number of Reboots Target: ");
-           serial.println(nrOfReboots, DEC);
+           Console::log("= Target: %d", (int) (target_slot & 0x7F));
+           Console::log("= Number of Reboots Target: %d", (int) nrOfReboots);
            if(nrOfReboots > 10 && ((target_slot & 0x7F) != 0)){ //if the surprise reboots >10, reset boot target and reset reboot counter
-               serial.println("# Max amount of unintentional reboots!");
-               serial.println("# Resetting TargetSlot");
+               Console::log("# Max amount of unintentional reboots!");
+               Console::log("# Resetting TargetSlot");
                nrOfReboots = 0;
                fram->write(FRAM_RESET_COUNTER + (target_slot & 0x7F), &nrOfReboots, 1);
                fram->write(BOOTLOADER_TARGET_REG, &current_slot, 1); //reset target to slot0
@@ -79,7 +73,7 @@ void Bootloader::JumpSlot(){
             uint8_t succesfulBootFlag = 0;
             fram->read(FRAM_BOOT_SUCCES_FLAG, &succesfulBootFlag, 1);
             if(succesfulBootFlag == 0){ //Boot is not succesful, fallback on default slot.
-                serial.println("# Last Boot unsuccesful, resetting TargetSlot");
+                Console::log("# Last Boot unsuccesful, resetting TargetSlot");
                 this->fram->write(BOOTLOADER_TARGET_REG, &current_slot, 1); //reset target to slot0
                 this->fram->read(BOOTLOADER_TARGET_REG, &target_slot, 1);
                 succesfulBootFlag = 1; //reset bootflag.
@@ -88,16 +82,14 @@ void Bootloader::JumpSlot(){
 
             //No problems encountered prep for jump if target is still set
             if((target_slot & 0x7F) != 0){
-                serial.print("= Target slot: ");
-                serial.println((target_slot & 0x7F), DEC);
-                serial.print("= Permanent Jump: ");
-                serial.println(((target_slot & BOOT_PERMANENT_FLAG) > 0) ? "YES" : "NO"); //permanent jump flag is set (not a one time jump)
+                Console::log("= Target slot: %d", (int)(target_slot & 0x7F));
+                Console::log("= Permanent Jump: %s", ((target_slot & BOOT_PERMANENT_FLAG) > 0) ? "YES" : "NO"); //permanent jump flag is set (not a one time jump)
 
                 if((target_slot & BOOT_PERMANENT_FLAG) == 0) {
-                    serial.println("+ Preparing One-time jump");
+                    Console::log("+ Preparing One-time jump");
                     this->fram->write(BOOTLOADER_TARGET_REG, &current_slot, 1); //reset target to slot0
                 } else {
-                    serial.println("+ Preparing Permanent jump");
+                    Console::log("+ Preparing Permanent jump");
                     //this->fram->write(FRAM_TARGET_SLOT, &current_slot, 1); //reset target to slot0
                 }
 
@@ -120,39 +112,38 @@ void Bootloader::JumpSlot(){
                         resetPtr = (uint32_t*)(0x30000 + 4);
                         break;
                     default:
-                        serial.println("+ BOOTLOADER - Error: target slot not valid!");
+                        Console::log("+ BOOTLOADER - Error: target slot not valid!");
                         target_slot = BOOT_PERMANENT_FLAG; //set target to 0 and reboot
                         this->fram->write(BOOTLOADER_TARGET_REG, &target_slot, 1);
                         MAP_SysCtl_rebootDevice();
                         break;
                 }
-                serial.print("Jumping to: ");
-                serial.println(*resetPtr, HEX);
-                serial.println("=============================================");
+                Console::log("Jumping to: 0x%x", (int) *resetPtr);
+                Console::log("=============================================");
 
                 void (*slotPtr)(void) = (void (*)())(*resetPtr);
 
                 slotPtr();  //This is the jump!
 
                 while(1){
-                    serial.println("Why are we here?"); //should never end up here
+                    Console::log("Why are we here?"); //should never end up here
                 }
             }else{
                 //not jumping anymore
-                serial.println("=============================================");
+                Console::log("=============================================");
             }
 
         }else if((current_slot & 0x7F) != 0){
             //In target slot succesfully, hence it is a succesful boot
             uint8_t succesfulBootFlag = 1; //reset bootflag.
             fram->write(FRAM_BOOT_SUCCES_FLAG, &succesfulBootFlag, 1);
-            serial.println("=============================================");
+            Console::log("=============================================");
         }else{ //In the default slot, but no target is set
-            serial.println("=============================================");
+            Console::log("=============================================");
         }
     }else{ //fram did not ping
-        serial.println("# FRAM Unavailable!");
-        serial.println("=============================================");
+        Console::log("# FRAM Unavailable!");
+        Console::log("=============================================");
     }
 }
 

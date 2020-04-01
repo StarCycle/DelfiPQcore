@@ -10,6 +10,7 @@
 
 #include "MB85RS.h"
 #include "FRAMMap.h"
+#include "Console.h"
 
 #define BOOT_PERMANENT_FLAG          0x80
 

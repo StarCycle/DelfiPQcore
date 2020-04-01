@@ -7,7 +7,6 @@
 
 #include "ResetService.h"
 
-extern DSerial serial;
 ResetService* resetServiceStub;
 void _forceHardReset(){
     resetServiceStub->forceHardReset();
@@ -32,8 +31,7 @@ bool CheckResetSRC(uint32_t Code, uint32_t SRC){
  */
 void resetHandler()
 {
-    serial.println("ResetService: internal watch-dog reset... ");
-    serial.println("");
+    Console::log("ResetService: internal watch-dog reset... ");
     //Add WDT time=out to reset-cause register
     RSTCTL->HARDRESET_SET |= RESET_HARD_WDTTIME;
     // TODO: flush the serial port to make sure all characters have been trinted out before resetting
@@ -106,7 +104,7 @@ void ResetService::init()
 void ResetService::readResetStatus(){
 
     //Get and Clear ResetRegisters
-    serial.println("========= ResetService Reboot Cause =========");
+    Console::log("========= ResetService Reboot Cause =========");
     this->resetStatus  = (RSTCTL->HARDRESET_STAT   & 0x0F) | ((RSTCTL->HARDRESET_STAT & 0xC000) >> 10);
     this->resetStatus |= (RSTCTL->SOFTRESET_STAT   & 0x07) << 6;
     this->resetStatus |= (RSTCTL->PSSRESET_STAT    & 0x0E) << 8;
@@ -122,85 +120,82 @@ void ResetService::readResetStatus(){
     RSTCTL->REBOOTRESET_CLR |= (uint32_t) 0x01;
     RSTCTL->CSRESET_CLR |= (uint32_t) 0x01;
 
-    serial.print("RESET STATUS: ");
-    serial.print(resetStatus, HEX);
-    serial.println("");
+    Console::log("RESET STATUS: 0x%x", (int) resetStatus);
 
     if( CheckResetSRC(resetStatus, RESET_HARD_SYSTEMREQ)){
-        serial.println("- POR Caused by System Reset Output of Cortex-M4");
+        Console::log("- POR Caused by System Reset Output of Cortex-M4");
     }
     if( CheckResetSRC(resetStatus, RESET_HARD_WDTTIME)){
-        serial.println("- POR Caused by HardReset WDT Timer expiration!");
+        Console::log("- POR Caused by HardReset WDT Timer expiration!");
     }
     if( CheckResetSRC(resetStatus, RESET_HARD_WDTPW_SRC)){
-        serial.println("- POR Caused by HardReset WDT Wrong Password!");
+        Console::log("- POR Caused by HardReset WDT Wrong Password!");
     }
     if( CheckResetSRC(resetStatus, RESET_HARD_FCTL)){
-        serial.println("- POR Caused by FCTL detecting a voltage Anomaly!");
+        Console::log("- POR Caused by FCTL detecting a voltage Anomaly!");
     }
     if( CheckResetSRC(resetStatus, RESET_HARD_CS)){
-        serial.println("- POR Extended for Clock Settle!");
+        Console::log("- POR Extended for Clock Settle!");
     }
     if( CheckResetSRC(resetStatus, RESET_HARD_PCM) ){
-        serial.println("- POR Extended for Power Settle!");
+        Console::log("- POR Extended for Power Settle!");
     }
     if( CheckResetSRC(resetStatus, RESET_SOFT_CPULOCKUP) ){
-        serial.println("- POR Caused by CPU Lock-up!");
+        Console::log("- POR Caused by CPU Lock-up!");
     }
     if( CheckResetSRC(resetStatus, RESET_SOFT_WDTTIME) ){
-        serial.println("- POR Caused by SoftReset WDT Timer expiration!!");
+        Console::log("- POR Caused by SoftReset WDT Timer expiration!!");
     }
     if( CheckResetSRC(resetStatus, RESET_SOFT_WDTPW_SRC) ){
-        serial.println("- POR Caused by SoftReset WDT Wrong Password!");
+        Console::log("- POR Caused by SoftReset WDT Wrong Password!");
     }
     if( CheckResetSRC(resetStatus, RESET_PSS_VCCDET) ){
-        serial.println("- POR Caused by VCC Detector trip condition!");
+        Console::log("- POR Caused by VCC Detector trip condition!");
     }
     if( CheckResetSRC(resetStatus, RESET_PSS_SVSH_TRIP) ){
-        serial.println("- POR Caused by Supply Supervisor detected Vcc trip condition!");
+        Console::log("- POR Caused by Supply Supervisor detected Vcc trip condition!");
     }
     if( CheckResetSRC(resetStatus, RESET_PSS_BGREF_BAD) ){
-        serial.println("- POR Caused by Bad Band Gap Reference!");
+        Console::log("- POR Caused by Bad Band Gap Reference!");
     }
     if( CheckResetSRC(resetStatus, RESET_PCM_LPM35) ){
-        serial.println("- POR Caused by PCM due to exit from LPM3.5!");
+        Console::log("- POR Caused by PCM due to exit from LPM3.5!");
     }
     if( CheckResetSRC(resetStatus, RESET_PCM_LPM45) ){
-        serial.println("- POR Caused by PCM due to exit from LPM4.5!");
+        Console::log("- POR Caused by PCM due to exit from LPM4.5!");
     }
     if( CheckResetSRC(resetStatus, RESET_PIN_NMI) ){
-        serial.println("- POR Caused by NMI Pin based event!");
+        Console::log("- POR Caused by NMI Pin based event!");
     }
     if( CheckResetSRC(resetStatus, RESET_REBOOT) ){
-        serial.println("- POR Caused by SysCTL Reboot!");
+        Console::log("- POR Caused by SysCTL Reboot!");
     }
     if( CheckResetSRC(resetStatus, RESET_CSRESET_DCOSHORT)){
-        serial.println("- POR Caused by DCO short circuit fault in external resistor!");
+        Console::log("- POR Caused by DCO short circuit fault in external resistor!");
     }
 
     if(hasFram){
         if(fram->ping()){
-            serial.println("+ FRAM present");
+            Console::log("+ FRAM present");
             this->fram->write(FRAM_RESET_CAUSE, &((uint8_t*)&resetStatus)[1], 3);
             uint8_t resetCounter = 0;
             fram->read(FRAM_RESET_COUNTER + Bootloader::getCurrentSlot(), &resetCounter, 1);
             if(!CheckResetSRC(resetStatus, RESET_REBOOT)){
-                serial.println("+ Unintentional reset!");
+                Console::log("+ Unintentional reset!");
                 resetCounter++;
                 fram->write(FRAM_RESET_COUNTER + Bootloader::getCurrentSlot(), &resetCounter, 1);
             }else{
-                serial.println("+ Intentional reset");
+                Console::log("+ Intentional reset");
                 resetCounter = 0;
                 fram->write(FRAM_RESET_COUNTER + Bootloader::getCurrentSlot(), &resetCounter, 1);
             }
-            serial.print("+ Reset counter at: ");
-            serial.println(resetCounter, DEC);
+            Console::log("+ Reset counter at: %d", (int) resetCounter);
         }else{
-            serial.println("# FRAM unavailable");
+            Console::log("# FRAM unavailable");
         }
     }
 
-    serial.println("=============================================");
+    Console::log("=============================================");
 }
 
 void ResetService::readCSStatus(){
@@ -322,30 +317,28 @@ void ResetService::readCSStatus(){
     CS->CLRIFG |= CS_SETIFG_SET_LFXTIFG;
 
     //Get and clear CLOCK FAULT STATUS
-    serial.println("========= ResetService Clock Faults =========");
+    Console::log("========= ResetService Clock Faults =========");
     this->csFaults  = CS->IFG;
 
-    serial.print("CS FAULTS: ");
-    serial.print(csFaults, HEX);
-    serial.println("");
+    Console::log("CS FAULTS: 0x%x", (int) csFaults);
 
     if( CheckResetSRC(csFaults, CS_IFG_LFXTIFG)){
-        serial.println("- Fault in LFXT");
+        Console::log("- Fault in LFXT");
     }
     if( CheckResetSRC(csFaults, CS_IFG_HFXTIFG)){
-        serial.println("- Fault in HFXT");
+        Console::log("- Fault in HFXT");
     }
     if( CheckResetSRC(csFaults, CS_IFG_DCOR_SHTIFG)){
-        serial.println("- DCO Short Circuit!");
+        Console::log("- DCO Short Circuit!");
     }
     if( CheckResetSRC(csFaults, CS_IFG_DCOR_OPNIFG)){
-        serial.println("- DCO Open Circuit!");
+        Console::log("- DCO Open Circuit!");
     }
     if( CheckResetSRC(csFaults, CS_IFG_FCNTLFIFG)){
-        serial.println("- LFXT Start-count expired!");
+        Console::log("- LFXT Start-count expired!");
     }
     if( CheckResetSRC(csFaults, CS_IFG_FCNTHFIFG)){
-        serial.println("- HFXT Start-count expired!");
+        Console::log("- HFXT Start-count expired!");
     }
 
     CS->CLRIFG |= CS_CLRIFG_CLR_LFXTIFG;
@@ -356,7 +349,7 @@ void ResetService::readCSStatus(){
     CS->CLRIFG |= CS_SETIFG_SET_LFXTIFG;
 
 
-    serial.println("=============================================");
+    Console::log("=============================================");
 }
 
 /**
@@ -433,7 +426,7 @@ bool ResetService::process(DataMessage &command, DataMessage &workingBuffer)
 {
     if (command.getPayload()[0] == RESET_SERVICE)
     {
-        serial.print("ResetService: ");
+        Console::log("ResetService: ");
         // prepare response frame
         //workingBuffer.setDestination(command.getSource());
         //workingBuffer.setSource(interface.getAddress());
@@ -442,7 +435,7 @@ bool ResetService::process(DataMessage &command, DataMessage &workingBuffer)
 
         if (command.getPayload()[1] == SERVICE_RESPONSE_REQUEST)
         {
-            serial.print("ResetRequest: ");
+            Console::log("ResetRequest: ");
             workingBuffer.getPayload()[2] = command.getPayload()[2];
             switch(command.getPayload()[2])
             {
@@ -453,7 +446,7 @@ bool ResetService::process(DataMessage &command, DataMessage &workingBuffer)
                     //interface.transmit(workingBuffer);
 
                     // now reset the MCU
-                    serial.println("SofReset set?");
+                    Console::log("SofReset set?");
                     this->setPostFunc(_forceSoftReset);
                     break;
 
@@ -515,7 +508,7 @@ bool ResetService::process(DataMessage &command, DataMessage &workingBuffer)
  */
 void ResetService::forceHardReset()
 {
-    serial.println("ResetService: Hard reset");
+    Console::log("ResetService: Hard reset");
     // TODO: flush the serial port to make sure all characters have been trinted out before resetting
     uint32_t d = MAP_CS_getMCLK() * 4 / 9600;
     for(uint32_t k = 0; k < d;  k++)
@@ -543,7 +536,7 @@ void ResetService::forceHardReset()
  */
 void ResetService::forceSoftReset()
 {
-    serial.println("ResetService: Soft reset");
+    Console::log("ResetService: Soft reset");
     // TODO: flush the serial port to make sure all characters have been trinted out before resetting
     uint32_t d = MAP_CS_getMCLK() * 4 / 9600;
     for(uint32_t k = 0; k < d;  k++)

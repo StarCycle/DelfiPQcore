@@ -11,9 +11,7 @@
 #include "Service.h"
 #include "Task.h"
 #include "PingService.h"
-#include "DSerial.h"
-
-extern DSerial serial;
+#include "Console.h"
 
 template <class Frame_Type>
 class CommandHandler: public Task
@@ -52,9 +50,7 @@ class CommandHandler: public Task
 
              if (!found)
              {
-                 serial.print("Unknown Service (");
-                 serial.print(rxBuffer.getPayload()[0], DEC);
-                 serial.println(")");
+                 Console::log("Unknown Service (%d)", (int) rxBuffer.getPayload()[0]);
 
                  txBuffer.setPayloadSize(2);
                  txBuffer.getPayload()[0] = 0;
@@ -75,7 +71,7 @@ class CommandHandler: public Task
          {
              // invalid payload size
              // what should we do here?
-             serial.println("Invalid Command, size must be > 1");
+             Console::log("Invalid Command, size must be > 1");
              txBuffer.setPayloadSize(2);
              txBuffer.getPayload()[0] = 0;
              txBuffer.getPayload()[1] = 0;

@@ -9,7 +9,7 @@
 #define RESETSERVICE_H_
 
 #include "Service.h"
-#include "DSerial.h"
+#include "Console.h"
 #include "ResetCodes.h"
 #include "MB85RS.h"
 #include "FRAMMap.h"

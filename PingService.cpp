@@ -6,7 +6,6 @@
  */
 #include "PingService.h"
 
-extern DSerial serial;
 
 /**
  *
@@ -34,7 +33,7 @@ bool PingService::process(DataMessage &command, DataMessage &workingBuffer)
 
         if (command.getPayload()[1] == SERVICE_RESPONSE_REQUEST)
         {
-            serial.println("PingService: Ping Request");
+            Console::log("PingService: Ping Request");
             // respond to ping
             workingBuffer.getPayload()[1] = SERVICE_RESPONSE_REPLY;
         }
