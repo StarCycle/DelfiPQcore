@@ -16,6 +16,8 @@
 class ADCManager
 {
 private:
+
+    ADCManager();
     static unsigned int enabledADCMem;
     static unsigned int NrOfActiveADC;
     static const uint32_t MemoryLocations[32];

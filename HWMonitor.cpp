@@ -16,10 +16,6 @@ HWMonitor::HWMonitor(MB85RS* fram_in){
     this->fram = fram_in;
 }
 
-void HWMonitor::readMCUTemp(){
-    ADCManager::enableTempMeasurement();
-}
-
 void HWMonitor::readResetStatus(){
     //Get and Clear ResetRegisters
     serial.println("========== HWMonitor: Reboot Cause ==========");

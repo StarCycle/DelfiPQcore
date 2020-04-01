@@ -37,7 +37,6 @@ class HWMonitor
 
      void readResetStatus();
      void readCSStatus();
-     void readMCUTemp();
 
      uint32_t getResetStatus();
      uint32_t getCSStatus();
