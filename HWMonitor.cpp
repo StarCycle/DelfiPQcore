@@ -13,6 +13,11 @@ bool CheckResetSRC(uint32_t Code, uint32_t SRC){
 
 HWMonitor::HWMonitor(MB85RS* fram_in){
     this->fram = fram_in;
+    this->hasFram = true;
+}
+
+HWMonitor::HWMonitor(){
+    this->hasFram = false;
 }
 
 void HWMonitor::readResetStatus(){
@@ -87,22 +92,26 @@ void HWMonitor::readResetStatus(){
         Console::log("- POR Caused by DCO short circuit fault in external resistor!");
     }
 
-    if(fram->ping()){
-        Console::log("+ FRAM present");
-        this->fram->write(FRAM_RESET_CAUSE, &((uint8_t*)&resetStatus)[1], 3);
-        uint8_t resetCounter = 0;
-        Console::log("+ Current Slot: %d", (int) Bootloader::getCurrentSlot());
-        fram->read(FRAM_RESET_COUNTER + Bootloader::getCurrentSlot(), &resetCounter, 1);
-        if(!CheckResetSRC(resetStatus, RESET_REBOOT)){
-            Console::log("+ Unintentional reset!");
-            resetCounter++;
-            fram->write(FRAM_RESET_COUNTER + Bootloader::getCurrentSlot(), &resetCounter, 1);
+    if(hasFram){
+        if(fram->ping()){
+            Console::log("+ FRAM present");
+            this->fram->write(FRAM_RESET_CAUSE, &((uint8_t*)&resetStatus)[1], 3);
+            uint8_t resetCounter = 0;
+            Console::log("+ Current Slot: %d", (int) Bootloader::getCurrentSlot());
+            fram->read(FRAM_RESET_COUNTER + Bootloader::getCurrentSlot(), &resetCounter, 1);
+            if(!CheckResetSRC(resetStatus, RESET_REBOOT)){
+                Console::log("+ Unintentional reset!");
+                resetCounter++;
+                fram->write(FRAM_RESET_COUNTER + Bootloader::getCurrentSlot(), &resetCounter, 1);
+            }else{
+                Console::log("+ Intentional reset");
+                resetCounter = 0;
+                fram->write(FRAM_RESET_COUNTER + Bootloader::getCurrentSlot(), &resetCounter, 1);
+            }
+            Console::log("+ Reset counter at: %d", (int) resetCounter);
         }else{
-            Console::log("+ Intentional reset");
-            resetCounter = 0;
-            fram->write(FRAM_RESET_COUNTER + Bootloader::getCurrentSlot(), &resetCounter, 1);
+            Console::log("# FRAM unavailable");
         }
-        Console::log("+ Reset counter at: %d", (int) resetCounter);
     }else{
         Console::log("# FRAM unavailable");
     }

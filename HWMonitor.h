@@ -20,6 +20,8 @@ class HWMonitor
 {
  protected:
      MB85RS *fram = 0;
+     bool hasFram = false;
+
      uint32_t resetStatus = 0;
      uint32_t CSStatus = 0;
 
@@ -34,6 +36,7 @@ class HWMonitor
 
  public:
      HWMonitor( MB85RS* fram  );
+     HWMonitor();
 
      void readResetStatus();
      void readCSStatus();
