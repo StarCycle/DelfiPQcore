@@ -7,7 +7,6 @@
 
 #include "PeriodicTaskNotifier.h"
 
-#define TASKNOTIFIER_PERIOD  48000000 / 10 //amount of counts for 0.1 seconds
 
 
 PeriodicTaskNotifier *notifierStub;
@@ -21,8 +20,8 @@ PeriodicTaskNotifier::PeriodicTaskNotifier(PeriodicTask** taskListIn, int nrOfTa
     taskList(taskListIn), numberOfTasks(nrOfTasks){
     notifierStub = this;
 
-    uint32_t count = TASKNOTIFIER_PERIOD;
-    static_assert( ((unsigned char) (TASKNOTIFIER_PERIOD >> 24) ) == 0, "PeriodicTaskNotifier Period is only 24 bits!" ); //(assert this is less than 24 bits)
+    count = FCLOCK/(1000/TASKNOTIFIER_PERIOD_MS);
+    static_assert( (FCLOCK/(1000/TASKNOTIFIER_PERIOD_MS)) >> 24 == 0, "PeriodicTaskNotifier Period is only 24 bits!" ); //(assert this is less than 24 bits)
 
     MAP_SysTick_enableModule();
     MAP_SysTick_setPeriod(count);  // count is only 24-bits

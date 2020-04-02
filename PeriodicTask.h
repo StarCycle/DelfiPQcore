@@ -8,6 +8,9 @@
 #ifndef PERIODICTASK_H_
 #define PERIODICTASK_H_
 
+#define TASKNOTIFIER_PERIOD_MS  100 //amount of counts for 0.1 seconds
+
+
 #include <driverlib.h>
 #include "Task.h"
 
