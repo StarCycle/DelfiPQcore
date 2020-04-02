@@ -6,9 +6,7 @@
  */
 
 #include "ADCManager.h"
-#include "DSerial.h"
 
-extern DSerial serial;
 
 unsigned int ADCManager::enabledADCMem = 0;
 unsigned int ADCManager::NrOfActiveADC = 0;
@@ -85,7 +83,7 @@ void ADCManager::executeADC(){
         MAP_ADC14_configureMultiSequenceMode(ADC_MEM0, MemoryLocations[NrOfActiveADC-1], true);
     }else{
         //should never happen
-        serial.println("ADCManager: impossible configuration!");
+        Console::log("ADCManager: impossible configuration!");
         return;
     }
     /* Triggering the start of the sample */

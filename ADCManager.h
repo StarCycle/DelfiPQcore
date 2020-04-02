@@ -12,6 +12,7 @@
 
 #include <driverlib.h>
 #include "msp.h"
+#include "Console.h"
 
 class ADCManager
 {

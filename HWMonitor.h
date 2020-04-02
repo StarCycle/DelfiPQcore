@@ -12,7 +12,7 @@
 #include "ResetCodes.h"
 #include "MB85RS.h"
 #include "FRAMMap.h"
-#include "DSerial.h"
+#include "Console.h"
 #include "Bootloader.h"
 #include "ADCManager.h"
 

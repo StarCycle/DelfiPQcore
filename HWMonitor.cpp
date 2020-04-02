@@ -6,7 +6,6 @@
  */
 
 #include "HWMonitor.h"
-extern DSerial serial;
 
 bool CheckResetSRC(uint32_t Code, uint32_t SRC){
     return ((Code & SRC) == SRC);
@@ -18,7 +17,7 @@ HWMonitor::HWMonitor(MB85RS* fram_in){
 
 void HWMonitor::readResetStatus(){
     //Get and Clear ResetRegisters
-    serial.println("========== HWMonitor: Reboot Cause ==========");
+    Console::log("========== HWMonitor: Reboot Cause ==========");
     this->resetStatus  = (RSTCTL->HARDRESET_STAT   & 0x0F) | ((RSTCTL->HARDRESET_STAT & 0xC000) >> 10);
     this->resetStatus |= (RSTCTL->SOFTRESET_STAT   & 0x07) << 6;
     this->resetStatus |= (RSTCTL->PSSRESET_STAT    & 0x0E) << 8;
@@ -34,113 +33,107 @@ void HWMonitor::readResetStatus(){
     RSTCTL->REBOOTRESET_CLR |= (uint32_t) 0x01;
     RSTCTL->CSRESET_CLR |= (uint32_t) 0x01;
 
-    serial.print("RESET STATUS: ");
-    serial.print(resetStatus, HEX);
-    serial.println("");
+    Console::log("RESET STATUS: %x", resetStatus);
 
     if( CheckResetSRC(resetStatus, RESET_HARD_SYSTEMREQ)){
-        serial.println("- POR Caused by System Reset Output of Cortex-M4");
+        Console::log("- POR Caused by System Reset Output of Cortex-M4");
     }
     if( CheckResetSRC(resetStatus, RESET_HARD_WDTTIME)){
-        serial.println("- POR Caused by HardReset WDT Timer expiration!");
+        Console::log("- POR Caused by HardReset WDT Timer expiration!");
     }
     if( CheckResetSRC(resetStatus, RESET_HARD_WDTPW_SRC)){
-        serial.println("- POR Caused by HardReset WDT Wrong Password!");
+        Console::log("- POR Caused by HardReset WDT Wrong Password!");
     }
     if( CheckResetSRC(resetStatus, RESET_HARD_FCTL)){
-        serial.println("- POR Caused by FCTL detecting a voltage Anomaly!");
+        Console::log("- POR Caused by FCTL detecting a voltage Anomaly!");
     }
     if( CheckResetSRC(resetStatus, RESET_HARD_CS)){
-        serial.println("- POR Extended for Clock Settle!");
+        Console::log("- POR Extended for Clock Settle!");
     }
     if( CheckResetSRC(resetStatus, RESET_HARD_PCM) ){
-        serial.println("- POR Extended for Power Settle!");
+        Console::log("- POR Extended for Power Settle!");
     }
     if( CheckResetSRC(resetStatus, RESET_SOFT_CPULOCKUP) ){
-        serial.println("- POR Caused by CPU Lock-up!");
+        Console::log("- POR Caused by CPU Lock-up!");
     }
     if( CheckResetSRC(resetStatus, RESET_SOFT_WDTTIME) ){
-        serial.println("- POR Caused by SoftReset WDT Timer expiration!!");
+        Console::log("- POR Caused by SoftReset WDT Timer expiration!!");
     }
     if( CheckResetSRC(resetStatus, RESET_SOFT_WDTPW_SRC) ){
-        serial.println("- POR Caused by SoftReset WDT Wrong Password!");
+        Console::log("- POR Caused by SoftReset WDT Wrong Password!");
     }
     if( CheckResetSRC(resetStatus, RESET_PSS_VCCDET) ){
-        serial.println("- POR Caused by VCC Detector trip condition!");
+        Console::log("- POR Caused by VCC Detector trip condition!");
     }
     if( CheckResetSRC(resetStatus, RESET_PSS_SVSH_TRIP) ){
-        serial.println("- POR Caused by Supply Supervisor detected Vcc trip condition!");
+        Console::log("- POR Caused by Supply Supervisor detected Vcc trip condition!");
     }
     if( CheckResetSRC(resetStatus, RESET_PSS_BGREF_BAD) ){
-        serial.println("- POR Caused by Bad Band Gap Reference!");
+        Console::log("- POR Caused by Bad Band Gap Reference!");
     }
     if( CheckResetSRC(resetStatus, RESET_PCM_LPM35) ){
-        serial.println("- POR Caused by PCM due to exit from LPM3.5!");
+        Console::log("- POR Caused by PCM due to exit from LPM3.5!");
     }
     if( CheckResetSRC(resetStatus, RESET_PCM_LPM45) ){
-        serial.println("- POR Caused by PCM due to exit from LPM4.5!");
+        Console::log("- POR Caused by PCM due to exit from LPM4.5!");
     }
     if( CheckResetSRC(resetStatus, RESET_PIN_NMI) ){
-        serial.println("- POR Caused by NMI Pin based event!");
+        Console::log("- POR Caused by NMI Pin based event!");
     }
     if( CheckResetSRC(resetStatus, RESET_REBOOT) ){
-        serial.println("- POR Caused by SysCTL Reboot!");
+        Console::log("- POR Caused by SysCTL Reboot!");
     }
     if( CheckResetSRC(resetStatus, RESET_CSRESET_DCOSHORT)){
-        serial.println("- POR Caused by DCO short circuit fault in external resistor!");
+        Console::log("- POR Caused by DCO short circuit fault in external resistor!");
     }
 
     if(fram->ping()){
-        serial.println("+ FRAM present");
+        Console::log("+ FRAM present");
         this->fram->write(FRAM_RESET_CAUSE, &((uint8_t*)&resetStatus)[1], 3);
         uint8_t resetCounter = 0;
-        serial.print("+ Current Slot: ");
-        serial.println(Bootloader::getCurrentSlot(),DEC);
+        Console::log("+ Current Slot: %d", (int) Bootloader::getCurrentSlot());
         fram->read(FRAM_RESET_COUNTER + Bootloader::getCurrentSlot(), &resetCounter, 1);
         if(!CheckResetSRC(resetStatus, RESET_REBOOT)){
-            serial.println("+ Unintentional reset!");
+            Console::log("+ Unintentional reset!");
             resetCounter++;
             fram->write(FRAM_RESET_COUNTER + Bootloader::getCurrentSlot(), &resetCounter, 1);
         }else{
-            serial.println("+ Intentional reset");
+            Console::log("+ Intentional reset");
             resetCounter = 0;
             fram->write(FRAM_RESET_COUNTER + Bootloader::getCurrentSlot(), &resetCounter, 1);
         }
-        serial.print("+ Reset counter at: ");
-        serial.println(resetCounter, DEC);
+        Console::log("+ Reset counter at: %d", (int) resetCounter);
     }else{
-        serial.println("# FRAM unavailable");
+        Console::log("# FRAM unavailable");
     }
 
-    serial.println("=============================================");
+    Console::log("=============================================");
 }
 
 void HWMonitor::readCSStatus(){
     //Get and clear CLOCK FAULT STATUS
-    serial.println("========== HWMonitor: Clock Faults ==========");
+    Console::log("========== HWMonitor: Clock Faults ==========");
     this->CSStatus  = CS->IFG;
 
-    serial.print("CS FAULTS: ");
-    serial.print(CSStatus, HEX);
-    serial.println("");
+    Console::log("CS FAULTS: %x", CSStatus);
 
     if( CheckResetSRC(CSStatus, CS_IFG_LFXTIFG)){
-        serial.println("- Fault in LFXT");
+        Console::log("- Fault in LFXT");
     }
     if( CheckResetSRC(CSStatus, CS_IFG_HFXTIFG)){
-        serial.println("- Fault in HFXT");
+        Console::log("- Fault in HFXT");
     }
     if( CheckResetSRC(CSStatus, CS_IFG_DCOR_SHTIFG)){
-        serial.println("- DCO Short Circuit!");
+        Console::log("- DCO Short Circuit!");
     }
     if( CheckResetSRC(CSStatus, CS_IFG_DCOR_OPNIFG)){
-        serial.println("- DCO Open Circuit!");
+        Console::log("- DCO Open Circuit!");
     }
     if( CheckResetSRC(CSStatus, CS_IFG_FCNTLFIFG)){
-        serial.println("- LFXT Start-count expired!");
+        Console::log("- LFXT Start-count expired!");
     }
     if( CheckResetSRC(CSStatus, CS_IFG_FCNTHFIFG)){
-        serial.println("- HFXT Start-count expired!");
+        Console::log("- HFXT Start-count expired!");
     }
 
     CS->CLRIFG |= CS_CLRIFG_CLR_LFXTIFG;
@@ -151,7 +144,7 @@ void HWMonitor::readCSStatus(){
     CS->CLRIFG |= CS_SETIFG_SET_LFXTIFG;
 
 
-    serial.println("=============================================");
+    Console::log("=============================================");
 }
 
 //void HWMonitor::readMCUTemp(){
