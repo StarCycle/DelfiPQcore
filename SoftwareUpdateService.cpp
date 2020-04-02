@@ -81,6 +81,7 @@ bool SoftwareUpdateService::process(DataMessage &command, DataMessage &workingBu
                     }else{
                         startOTA(command.getPayload()[COMMAND_DATA], false);
                     }
+
                     if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) Console::log("OTA started!");
 
                 } else throw_error(SLOT_OUT_OF_RANGE);

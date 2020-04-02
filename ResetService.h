@@ -38,21 +38,13 @@ class ResetService: public Service
 //     uint32_t rebootResetStat;
 //     uint32_t csResetStat;
 
-     uint32_t resetStatus = 0;
-     uint32_t csStatus = 0;
-     uint32_t csFaults = 0;
-
-     bool hasFram = false;
-     MB85RS *fram = 0;
 
  public:
      ResetService( const unsigned long port, const unsigned long pin );
      ResetService( const unsigned long port, const unsigned long pin, MB85RS* fram );
      virtual bool process( DataMessage &command, DataMessage &workingBbuffer );
      void init();
-     uint32_t getResetStatus();
-     void readResetStatus();
-     void readCSStatus();
+
      void refreshConfiguration();
      void kickExternalWatchDog();
      void kickInternalWatchDog();
