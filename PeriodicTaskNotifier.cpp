@@ -39,7 +39,7 @@ PeriodicTaskNotifier::PeriodicTaskNotifier(PeriodicTask** taskListIn, int nrOfTa
 void PeriodicTaskNotifier::NotifyTasks(){
     for(int k = 0; k < numberOfTasks; k++){
         this->taskCounter[k] += 1;
-        if(this->taskCounter[k] % this->taskList[k]->taskCount == 0){
+        if(this->taskCounter[k] >= this->taskList[k]->taskCount){
             this->taskCounter[k] = 0;
             taskList[k]->notify();
         }
