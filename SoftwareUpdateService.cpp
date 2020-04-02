@@ -7,8 +7,6 @@
 
 #include "SoftwareUpdateService.h"
 
-extern DSerial serial;
-
 uint8_t HexStringToNibble(char c){
     if ((c) >= 'a'){
         return c - 87;
@@ -55,7 +53,7 @@ SoftwareUpdateService::SoftwareUpdateService(MB85RS &fram_in, uint8_t * versionS
 SoftwareUpdateService::SoftwareUpdateService(MB85RS &fram_in) {
     fram = &fram_in;
     hasVersionNumber = false;
-    serial.println("WARNING: no SW Version!");
+    Console::log("WARNING: no SW Version!");
 }
 
 bool SoftwareUpdateService::process(DataMessage &command, DataMessage &workingBuffer) {
@@ -83,7 +81,8 @@ bool SoftwareUpdateService::process(DataMessage &command, DataMessage &workingBu
                     }else{
                         startOTA(command.getPayload()[COMMAND_DATA], false);
                     }
-                    if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) serial.println("OTA started!");
+
+                    if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) Console::log("OTA started!");
 
                 } else throw_error(SLOT_OUT_OF_RANGE);
             } else throw_error(PARAMETER_MISMATCH);
@@ -92,7 +91,7 @@ bool SoftwareUpdateService::process(DataMessage &command, DataMessage &workingBu
         case SET_METADATA:
             if(command.getSize() == METADATA_SIZE - 1 + PAYLOAD_SIZE_OFFSET) {
                 setMetadata(&(command.getPayload()[COMMAND_DATA]));
-                if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) serial.println("Metadata received!");
+                if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) Console::log("Metadata received!");
 
             } else throw_error(PARAMETER_MISMATCH);
             break;
@@ -103,7 +102,7 @@ bool SoftwareUpdateService::process(DataMessage &command, DataMessage &workingBu
                     getMetadata(command.getPayload()[COMMAND_DATA] - 1);
                     if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) {
                         print_metadata(&payload_data[COMMAND_DATA]);
-                        serial.println("Metadata sended!");
+                        Console::log("Metadata sent!");
                     }
                 } else throw_error(SLOT_OUT_OF_RANGE);
             } else throw_error(PARAMETER_MISMATCH);
@@ -118,15 +117,15 @@ bool SoftwareUpdateService::process(DataMessage &command, DataMessage &workingBu
 //                serial.print("CRC OFFSET: ");
 //                serial.println(command.getPayload()[COMMAND_DATA] | (command.getPayload()[COMMAND_DATA + 1] << 8), DEC);
                 setPartialCRCs(&(command.getPayload()[COMMAND_DATA+2]), command.getSize() - (PAYLOAD_SIZE_OFFSET+2), command.getPayload()[COMMAND_DATA] | (command.getPayload()[COMMAND_DATA + 1] << 8));
-                if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) serial.println("CRC!");
+                if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) Console::log("CRC!");
             } else throw_error(PARAMETER_MISMATCH);
             break;
 
         case SET_BLOCK:
             if(command.getSize() <= BLOCK_SIZE + 2 + PAYLOAD_SIZE_OFFSET) {
-                serial.println("BLOCK!");
+                Console::log("BLOCK!");
                 setBlock(&(command.getPayload()[COMMAND_DATA + 2]), command.getPayload()[COMMAND_DATA] | (command.getPayload()[COMMAND_DATA + 1] << 8));
-                if(payload_data[COMMAND_RESPONSE] == COMMAND_ERROR) serial.println("ERROR!");
+                if(payload_data[COMMAND_RESPONSE] == COMMAND_ERROR) Console::log("ERROR!");
             } else throw_error(PARAMETER_MISMATCH);
             break;
 
@@ -134,7 +133,7 @@ bool SoftwareUpdateService::process(DataMessage &command, DataMessage &workingBu
             if(command.getSize() == PAYLOAD_SIZE_OFFSET + 1) {
                 if(command.getPayload()[COMMAND_DATA] == 1 || command.getPayload()[COMMAND_DATA] == 2) {
                     checkMD5(command.getPayload()[COMMAND_DATA]);
-                    if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) serial.println("MD5 is correct!");
+                    if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) Console::log("MD5 is correct!");
                 } else throw_error(SLOT_OUT_OF_RANGE);
             } else throw_error(PARAMETER_MISMATCH);
             break;
@@ -142,7 +141,7 @@ bool SoftwareUpdateService::process(DataMessage &command, DataMessage &workingBu
         case STOP_OTA:
             if(command.getSize() == PAYLOAD_SIZE_OFFSET) {
                 stopOTA();
-                if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) serial.println("OTA is stopped!");
+                if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) Console::log("OTA is stopped!");
             } else throw_error(PARAMETER_MISMATCH);
             break;
 
@@ -152,12 +151,12 @@ bool SoftwareUpdateService::process(DataMessage &command, DataMessage &workingBu
                     if(command.getPayload()[COMMAND_DATA] == 1 || command.getPayload()[COMMAND_DATA] == 2) {
                         slot_erase = command.getPayload()[COMMAND_DATA];
                         state_flags |= ERASE_FLAG;
-                        serial.println("Are you sure(13)?");
+                        Console::log("Are you sure(13)?");
                     } else throw_error(SLOT_OUT_OF_RANGE);
                 } else {
                     if(command.getPayload()[COMMAND_DATA] == ACKNOWLEDGE) {
                         eraseSlot(slot_erase);
-                        if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) serial.println("Slot is erased!");
+                        if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) Console::log("Slot is erased!");
                     } else throw_error(PARAMETER_MISMATCH);
                 }
             } else throw_error(PARAMETER_MISMATCH);
@@ -166,7 +165,7 @@ bool SoftwareUpdateService::process(DataMessage &command, DataMessage &workingBu
             if(command.getSize() == PAYLOAD_SIZE_OFFSET + 2) {
                 if(command.getPayload()[COMMAND_DATA] < 3) {
                     setBootSlot(command.getPayload()[COMMAND_DATA], command.getPayload()[COMMAND_DATA + 1]);
-                    if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) serial.println("Slot code executed successfully!");
+                    if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) Console::log("Slot code executed successfully!");
                 } else throw_error(SLOT_OUT_OF_RANGE);
             } else throw_error(PARAMETER_MISMATCH);
             break;
@@ -201,16 +200,12 @@ bool SoftwareUpdateService::process(DataMessage &command, DataMessage &workingBu
 }
 
 void SoftwareUpdateService::getVersionNumber(){
-    serial.println("SoftwareVersionService: Software Version Request");
+    Console::log("SoftwareVersionService: Software Version Request");
     // respond to ping
     if(this->hasVersionNumber == true){
         payload_size = 10;
         payload_data[COMMAND_RESPONSE] = SERVICE_RESPONSE_REPLY;
-        serial.println("Has SW Version! ");
-        for(int i = 0; i < 8; i++){
-            serial.print(versionNumber[i],HEX);
-        }
-        serial.println();
+        Console::log("Has SW Version: %x%x%x%x%x%x%x%x", versionNumber[0],versionNumber[1],versionNumber[2],versionNumber[3],versionNumber[4],versionNumber[5],versionNumber[6],versionNumber[7]);
         payload_data[2] = this->versionNumber[0];
         payload_data[3] = this->versionNumber[1];
         payload_data[4] = this->versionNumber[2];
@@ -236,10 +231,9 @@ void SoftwareUpdateService::startOTA(unsigned char slot_number, bool allow_resum
             }else if(slot_number == 2){
                 fram->read(SLOT2_METADATA_STATE, &slotState, 1);
             }
-            serial.print("Slot State: ");
-            serial.println(slotState, HEX);
+            Console::log("Slot State: 0x%x", (int) slotState);
             if((slotState & 0x03) == EMPTY) {
-                serial.println("Slot is empty!");
+                Console::log("Slot is empty!");
                 slotState = PARTIAL; //Set status to Partial OTA
                 slotState |= UPDATE_FLAG;
                 if(slot_number == 2){
@@ -273,10 +267,8 @@ void SoftwareUpdateService::startOTA(unsigned char slot_number, bool allow_resum
 
             } else if((slotState & 0x03) == PARTIAL) { //slot is not empty but partially updated
                 // first check if the partially updated slot Aligns with current progress and check for resume:
-                serial.print("Update still in progress, progress state: ");
-                serial.print(state_flags, HEX);
-                serial.print("  -  slot state: ");
-                serial.println(slotState, HEX);
+                Console::log("Update still in progress, progress state: 0x%x", (int) state_flags );
+                Console::log("  -  slot state: %x", (int) slotState);
                 if((slotState == state_flags) && ((state_flags & UPDATE_FLAG) == UPDATE_FLAG )){ //check if we can resume, due to the progress status being identical to the slot status:
                     if(allow_resume){ //if we allow resume
                         update_slot = slot_number; //store my updateSlot in RAM
@@ -305,7 +297,7 @@ void SoftwareUpdateService::startOTA(unsigned char slot_number, bool allow_resum
                         }else if(slot_number == 2){
                             fram->write(SLOT2_METADATA_STATE, &state_flags, 1);
                         }
-                        serial.println("Update Resumed!!");
+                        Console::log("Update Resumed!!");
 
                         //write Command Reply:
                         payload_size = 2;
@@ -348,8 +340,7 @@ void SoftwareUpdateService::setMetadata(unsigned char* metadata) {
                 }else if(update_slot == 2){
                     fram->write(SLOT2_METADATA_STATE, &state_flags, 1);
                 }
-                serial.print("METADATA RECEIVED, Status: ");
-                serial.println(state_flags, HEX);
+                Console::log("METADATA RECEIVED, Status: 0x%x", (int)state_flags);
 
                 //set Response
                 payload_size = 2;
@@ -404,7 +395,7 @@ void SoftwareUpdateService::setPartialCRCs(unsigned char* crc_block, unsigned ch
 
                 //Check if all CRCs are received
                 if(this->getNumOfMissedCRCs() == 0){
-                    serial.println("ALL CRCS RECEIVED!!");
+                    Console::log("ALL CRCS RECEIVED!!");
                     //set Flag
                     state_flags |= PARTIAL_CRC_FLAG;
                     if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
@@ -449,7 +440,7 @@ void SoftwareUpdateService::setBlock(unsigned char* data_block, uint16_t block_o
 
                         //Check if all Blocks are received
                         if(this->getNumOfMissedBlocks() == 0){
-                            serial.println("ALL BLOCKS RECEIVED!!");
+                            Console::log("ALL BLOCKS RECEIVED!!");
                             //set Flag
                             state_flags &= ~(0x03);
                             state_flags |= FULL;
@@ -495,12 +486,9 @@ bool SoftwareUpdateService::checkPartialCRC(unsigned char* data_block, uint16_t 
 
 
     if(crc != val) {
-        serial.print("Block offset: ");
-        serial.println(block_offset, DEC);
-        serial.print("Calculated CRC: ");
-        serial.println(val, DEC);
-        serial.print("Stored CRC: ");
-        serial.println(crc, DEC);
+        Console::log("Block offset: %d", (int) block_offset);
+        Console::log("Calculated CRC: %d", (int) val);
+        Console::log("Stored CRC: %d", (int) crc);
     }
 
     return crc == val;
@@ -560,8 +548,7 @@ void SoftwareUpdateService::checkMD5(unsigned char slot_number) {
         if(equal){
             status |= MD5_CORRECT_FLAG;
             state_flags |= MD5_CORRECT_FLAG;
-            serial.print("MD5 Correct! Status: ");
-            serial.println(status, HEX);
+            Console::log("MD5 Correct! Status: 0x%x", (int) status);
         }
         if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
         if(slot_number == 1){
@@ -577,8 +564,7 @@ void SoftwareUpdateService::checkMD5(unsigned char slot_number) {
 }
 
 void SoftwareUpdateService::stopOTA() {
-    serial.print("stopping update, status: ");
-    serial.println(state_flags, HEX);
+    Console::log("stopping update, status: 0x%x", (int) state_flags);
     //check MD5 before killing
     if((state_flags & FULL) == FULL) {
         checkMD5(update_slot);
@@ -587,8 +573,7 @@ void SoftwareUpdateService::stopOTA() {
     if((state_flags & UPDATE_FLAG) == UPDATE_FLAG) { //OTA is running, time to kill it.
         state_flags &= ~UPDATE_FLAG;
 
-        serial.print("stopped update, status: ");
-        serial.println(state_flags, HEX);
+        Console::log("stopped update, status: 0x%x", (int) state_flags);
         //Write State
         if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
         if(update_slot == 1){
@@ -652,8 +637,7 @@ void SoftwareUpdateService::setBootSlot(unsigned char slot, bool permanent) {
         }else if(slot == 2){
             fram->read(SLOT2_METADATA_STATE, &slotFlag, 1);
         }
-        serial.print("Status flag of Target: ");
-        serial.println(slotFlag, HEX);
+        Console::log("Status flag of Target: 0x%x", (int) slotFlag);
 
         //checkMD5(slot); No reason to check again, flag should be set already.
 
@@ -698,7 +682,7 @@ void SoftwareUpdateService::getMissedBlocks() {
 
         switch(state_flags) {
             case FULL:
-                serial.println("The requested slot is already fully programmed.");
+                Console::log("The requested slot is already fully programmed.");
                 return;
             case EMPTY:
                 return throw_error(UPDATE_NOT_STARTED);
@@ -717,9 +701,7 @@ void SoftwareUpdateService::getMissedBlocks() {
             if((blocks_received[missed_pointer / BYTE_SIZE] & (1 << missed_pointer % BYTE_SIZE)) == 0) { //there is a block missing here
                 memcpy(&payload_data[COMMAND_DATA + (payload_size - 2)], &missed_pointer, sizeof(uint16_t));
                 payload_size += 2;
-                serial.print("Block ");
-                serial.print(missed_pointer, DEC);
-                serial.println("  is missing.");
+                Console::log("Block %d is missing", (int) missed_pointer);
             }
 
             missed_pointer++;
@@ -736,7 +718,7 @@ void SoftwareUpdateService::getMissedCRCs() {
 
         switch(state_flags) {
             case FULL:
-                serial.println("The requested slot is already fully programmed.");
+                Console::log("The requested slot is already fully programmed.");
                 return;
             case EMPTY:
                 return throw_error(UPDATE_NOT_STARTED);
@@ -755,9 +737,7 @@ void SoftwareUpdateService::getMissedCRCs() {
             if((crc_received[missed_pointer / BYTE_SIZE] & (1 << missed_pointer % BYTE_SIZE)) == 0) { //there is a block missing here
                 memcpy(&payload_data[COMMAND_DATA + (payload_size - 2)], &missed_pointer, sizeof(uint16_t));
                 payload_size += 2;
-                serial.print("CRC ");
-                serial.print(missed_pointer, DEC);
-                serial.println("  is missing.");
+                Console::log("CRC %d is missing.", (int) missed_pointer);
             }
 
             missed_pointer++;
@@ -767,116 +747,96 @@ void SoftwareUpdateService::getMissedCRCs() {
 
 
 void SoftwareUpdateService::print_metadata(unsigned char* metadata) {
-    serial.println("Metadata:");
-    serial.print("\tSlot status: ");
+    Console::log("Metadata: %x", (int) *metadata);
+    Console::log("\tSlot status: ");
     switch (metadata[0])
     {
         case EMPTY:
-            serial.println("Emtpy");
+            Console::log("Emtpy");
             break;
         case PARTIAL:
-            serial.println("Partial");
+            Console::log("Partial");
             break;
         case FULL:
-            serial.println("Full");
+            Console::log("Full");
             break;
         default:
-            serial.println("Unknown slot status!");
+            Console::log("Unknown slot status!");
             break;
     }
-    serial.print("\tVersion: ");
-    if(metadata[MD5_SIZE+1] < 0x10) serial.print("0");
-    serial.print(metadata[MD5_SIZE+1], HEX);
-    if(metadata[MD5_SIZE+2] < 0x10) serial.print("0");
-    serial.print(metadata[MD5_SIZE+2], HEX);
-    if(metadata[MD5_SIZE+3] < 0x10) serial.print("0");
-    serial.print(metadata[MD5_SIZE+3], HEX);
-    if(metadata[MD5_SIZE+4] < 0x10) serial.print("0");
-    serial.print(metadata[MD5_SIZE+4], HEX);
-    if(metadata[MD5_SIZE+5] < 0x10) serial.print("0");
-    serial.print(metadata[MD5_SIZE+5], HEX);
-    if(metadata[MD5_SIZE+6] < 0x10) serial.print("0");
-    serial.print(metadata[MD5_SIZE+6], HEX);
-    if(metadata[MD5_SIZE+7] < 0x10) serial.print("0");
-    serial.print(metadata[MD5_SIZE+7], HEX);
-    if(metadata[MD5_SIZE+8] < 0x10) serial.print("0");
-    serial.println(metadata[MD5_SIZE+8], HEX);
-    serial.print("\tNumber of blocks: ");
-    serial.println(metadata[MD5_SIZE+10] << 8 | metadata[MD5_SIZE+9], DEC);
-    serial.print("\tMD5 CRC: ");
-    for(int i = 0; i < MD5_SIZE; i++) {
-        if(metadata[i + 1] < 0x10) serial.print("0");
-        serial.print(metadata[i + 1], HEX);
-    }
-    serial.println();
+    Console::log("\tVersion: %x%x%x%x%x%x%x%x",metadata[MD5_SIZE+1],metadata[MD5_SIZE+2],metadata[MD5_SIZE+3],metadata[MD5_SIZE+4],metadata[MD5_SIZE+5],metadata[MD5_SIZE+6],metadata[MD5_SIZE+7],metadata[MD5_SIZE+8]);
+    Console::log("\tNumber of blocks: %d", (int) (metadata[MD5_SIZE+10] << 8 | metadata[MD5_SIZE+9]));
+    Console::log("\tMD5: %x%x%x%x%x%x%x%x%x%x%x%x%x%x%x%x",
+                 metadata[0], metadata[1],  metadata[2], metadata[3],
+                 metadata[4], metadata[5],  metadata[6], metadata[7],
+                 metadata[8], metadata[9],  metadata[10], metadata[11],
+                 metadata[12], metadata[13],  metadata[14], metadata[15]);
 }
 
 void SoftwareUpdateService::throw_error(unsigned char error) {
-    serial.print("Error(");
-    serial.print(error, DEC);
-    serial.print("): ");
+    Console::log("Error(%d)", (int) error);
 
     switch (error)
     {
     case NO_FRAM_ACCESS:
-        serial.println("No access to FRAM.");
+        Console::log("No access to FRAM.");
         break;
     case NO_SLOT_ACCESS:
-        serial.println("No access to requested slot.");
+        Console::log("No access to requested slot.");
         break;
     case SLOT_OUT_OF_RANGE:
-        serial.println("Requested slot is out of range.");
+        Console::log("Requested slot is out of range.");
         break;
     case MEMORY_FULL:
-        serial.println("The memory is full.");
+        Console::log("The memory is full.");
         break;
     case PARAMETER_MISMATCH:
-        serial.println("Invalid parameter size provided to function.");
+        Console::log("Invalid parameter size provided to function.");
         break;
     case UPDATE_NOT_STARTED:
-        serial.println("The update has not started yet.");
+        Console::log("The update has not started yet.");
         break;
     case UPDATE_ALREADY_STARTED:
-        serial.println("The update is still in progress.");
+        Console::log("The update is still in progress.");
         break;
     case METADATA_ALREADY_RECEIVED:
-        serial.println("The metadata has already been received.");
+        Console::log("The metadata has already been received.");
         break;
     case METADATA_NOT_RECEIVED:
-        serial.println("The metadata has not been received yet.");
+        Console::log("The metadata has not been received yet.");
         break;
     case PARTIAL_ALREADY_RECEIVED:
-        serial.println("The partial crcs have already been received.");
+        Console::log("The partial crcs have already been received.");
         break;
     case PARTIAL_NOT_RECEIVED:
-        serial.println("The partial crcs have not been received yet.");
+        Console::log("The partial crcs have not been received yet.");
         break;
     case CRC_MISMATCH:
-        serial.println("A partial crc mismatch has occurred.");
+        Console::log("A partial crc mismatch has occurred.");
         break;
     case MD5_MISMATCH:
-        serial.println("The md5 hash does not match.");
+        Console::log("The md5 hash does not match.");
         break;
     case OFFSET_OUT_OF_RANGE:
-        serial.println("The requested offset is out of range.");
+        Console::log("The requested offset is out of range.");
         break;
     case SLOT_NOT_EMPTY:
-        serial.println("The requested slot is not empty yet.");
+        Console::log("The requested slot is not empty yet.");
         break;
     case UPDATE_TO_BIG:
-        serial.println("The update is too big for the memory slot.");
+        Console::log("The update is too big for the memory slot.");
         break;
     case SLOT_NOT_PROGRAMMED:
-        serial.println("The requested slot is not (completely) programmed.");
+        Console::log("The requested slot is not (completely) programmed.");
         break;
     case UPDATE_NOT_CURRENT_SESSION:
-        serial.println("The update cannot start, because the update is not from the current session. Erase the slot first and retry.");
+        Console::log("The update cannot start, because the update is not from the current session. Erase the slot first and retry.");
         break;
     case SELF_ACTION:
-        serial.println("The requested slot  cannot perform an action on itself.");
+        Console::log("The requested slot  cannot perform an action on itself.");
         break;
     case NO_VERSION_NUMBER:
-        serial.println("Current Software does not have a version number!");
+        Console::log("Current Software does not have a version number!");
         break;
     default:
         break;

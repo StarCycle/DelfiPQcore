@@ -7,7 +7,6 @@
 
 #include "ResetService.h"
 
-extern DSerial serial;
 ResetService* resetServiceStub;
 void _forceHardReset(){
     resetServiceStub->forceHardReset();
@@ -27,8 +26,7 @@ void _forceSoftReset(){
  */
 void resetHandler()
 {
-    serial.println("ResetService: internal watch-dog reset... ");
-    serial.println("");
+    Console::log("ResetService: internal watch-dog reset... ");
     //Add WDT time=out to reset-cause register
     RSTCTL->HARDRESET_SET |= RESET_HARD_WDTTIME;
     // TODO: flush the serial port to make sure all characters have been trinted out before resetting
@@ -173,7 +171,7 @@ bool ResetService::process(DataMessage &command, DataMessage &workingBuffer)
 {
     if (command.getPayload()[0] == RESET_SERVICE)
     {
-        serial.print("ResetService: ");
+        Console::log("ResetService: ");
         // prepare response frame
         //workingBuffer.setDestination(command.getSource());
         //workingBuffer.setSource(interface.getAddress());
@@ -182,7 +180,7 @@ bool ResetService::process(DataMessage &command, DataMessage &workingBuffer)
 
         if (command.getPayload()[1] == SERVICE_RESPONSE_REQUEST)
         {
-            serial.print("ResetRequest: ");
+            Console::log("ResetRequest: ");
             workingBuffer.getPayload()[2] = command.getPayload()[2];
             switch(command.getPayload()[2])
             {
@@ -193,7 +191,7 @@ bool ResetService::process(DataMessage &command, DataMessage &workingBuffer)
                     //interface.transmit(workingBuffer);
 
                     // now reset the MCU
-                    serial.println("SofReset set?");
+                    Console::log("SofReset set?");
                     this->setPostFunc(_forceSoftReset);
                     break;
 
@@ -255,7 +253,7 @@ bool ResetService::process(DataMessage &command, DataMessage &workingBuffer)
  */
 void ResetService::forceHardReset()
 {
-    serial.println("ResetService: Hard reset");
+    Console::log("ResetService: Hard reset");
     // TODO: flush the serial port to make sure all characters have been trinted out before resetting
     uint32_t d = MAP_CS_getMCLK() * 4 / 9600;
     for(uint32_t k = 0; k < d;  k++)
@@ -283,7 +281,7 @@ void ResetService::forceHardReset()
  */
 void ResetService::forceSoftReset()
 {
-    serial.println("ResetService: Soft reset");
+    Console::log("ResetService: Soft reset");
     // TODO: flush the serial port to make sure all characters have been trinted out before resetting
     uint32_t d = MAP_CS_getMCLK() * 4 / 9600;
     for(uint32_t k = 0; k < d;  k++)

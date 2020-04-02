@@ -11,14 +11,12 @@
 #include <type_traits>
 #include "Service.h"
 #include "TelemetryContainer.h"
-#include "DSerial.h"
+#include "Console.h"
 
 #define HOUSEKEEPING_SERVICE             3
 #define HOUSEKEEPING_ERROR               0
 #define HOUSEKEEPING_REQUEST             1
 #define HOUSEKEEPING_RESPONSE            2
-
-extern DSerial serial;
 
 template <class T>
 class HousekeepingService: public Service
@@ -55,7 +53,7 @@ protected:
 
             if (command.getPayload()[1] == SERVICE_RESPONSE_REQUEST)
             {
-                serial.println("HousekeepingService: Request");
+                Console::log("HousekeepingService: Request");
 
                 // respond to housekeeping request
                 workingBuffer.getPayload()[1] = SERVICE_RESPONSE_REPLY;

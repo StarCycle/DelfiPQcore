@@ -9,7 +9,7 @@
 #define PINGSERVICE_H_
 
 #include "Service.h"
-#include "DSerial.h"
+#include "Console.h"
 
 #define PING_SERVICE            17
 #define PING_ERROR               0
