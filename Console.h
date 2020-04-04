@@ -18,6 +18,7 @@ extern "C" {
 class Console
 {
 private:
+    static unsigned int baudrate;
 
     // Private constructor to prevent instancing.
     Console();

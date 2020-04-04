@@ -7,9 +7,21 @@
 
 #include "Console.h"
 
-/**** PUBLIC METHODS ****/
+// providing an initial value to make sure we do not have a division by 0
+unsigned int Console::baudrate = 1000;
+
+/**
+ *
+ *   Console class Constructor
+ *
+ *   Parameters:
+ *   baudrate                   baudrate in bps
+ *
+ */
 void Console::init( unsigned int baudrate )
 {
+    Console::baudrate = baudrate;
+
     MAP_UART_disableModule( EUSCI_A0_BASE );   //disable UART operation for configuration settings
 
     // Selecting P1.2 and P1.3 in UART mode
@@ -48,6 +60,17 @@ void Console::init( unsigned int baudrate )
     MAP_UART_enableModule( EUSCI_A0_BASE );
 }
 
+/**
+ *
+ *   Check if a serial port is connected to the console. This is
+ *   used to disable the log in case no serial port is connected.
+ *
+ *   Parameters:
+ *
+ *   Returns:
+ *   bool true      :           a serial port is connected to the console
+ *        false     :           no serial port is connected to the console
+ */
 bool Console::isEnabled()
 {
     uint8_t status = MAP_GPIO_getInputPinValue(GPIO_PORT_P1, GPIO_PIN2);
@@ -58,7 +81,21 @@ bool Console::isEnabled()
     }
 }
 
-
+/**
+ *
+ *   Console log function: the syntax of this function is similar to
+ *   the printf syntax but limited to 7 separate data types: character,
+ *   string, integer, unsigned integer, long, unsigned long, and
+ *   hexadecimal (16-bit) formatting.
+ *
+ *   A newline "\r\n" is appended at the end of the string.
+ *
+ *   Parameters:
+ *   const char *               printf formatting string
+ *   ...                        eventual parameters to format
+ *
+ *   Returns:
+ */
 void Console::log( const char *text, ... )
 {
     if(isEnabled()){
@@ -97,16 +134,41 @@ void Console::log( const char *text, ... )
     }
 }
 
-
+/**
+ *
+ *   Console log function printing an empty line.
+ *   The new line formatting character are "\r\n".
+ *
+ *   Parameters:
+ *
+ *   Returns:
+ *
+ */
 void Console::log()
 {
     MAP_UART_transmitData( EUSCI_A0_BASE, '\r' );
     MAP_UART_transmitData( EUSCI_A0_BASE, '\n' );
 }
 
+/**
+ *
+ *   Flush the console output buffer. This function introduces
+ *   a delay to ensure all characters have been transmitted.
+ *
+ *   Parameters:
+ *
+ *   Returns:
+ *
+ */
 void Console::flush( void )
 {
-    // TODO Auto-generated constructor stub
+    // Workaround for USCI42 errata
+    // introduce a 2 bytes delay to make sure the UART buffer is flushed
+    uint32_t d = MAP_CS_getMCLK() * 4 / baudrate;
+    for(uint32_t k = 0; k < d;  k++)
+    {
+        __asm("  nop");
+    }
 
 }
 
