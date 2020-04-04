@@ -30,18 +30,8 @@ class ResetService: public Service
      const unsigned long WDIPort;
      const unsigned long WDIPin;
 
-//     uint32_t softResetStat;
-//     uint32_t hardResetStat;
-//     uint32_t pssResetStat;
-//     uint32_t pcmResetStat;
-//     uint32_t pinResetStat;
-//     uint32_t rebootResetStat;
-//     uint32_t csResetStat;
-
-
  public:
      ResetService( const unsigned long port, const unsigned long pin );
-     ResetService( const unsigned long port, const unsigned long pin, MB85RS* fram );
      virtual bool process( DataMessage &command, DataMessage &workingBbuffer );
      void init();
 

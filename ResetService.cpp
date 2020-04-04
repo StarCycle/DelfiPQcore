@@ -8,10 +8,14 @@
 #include "ResetService.h"
 
 ResetService* resetServiceStub;
-void _forceHardReset(){
+
+void _forceHardReset()
+{
     resetServiceStub->forceHardReset();
 }
-void _forceSoftReset(){
+
+void _forceSoftReset()
+{
     resetServiceStub->forceSoftReset();
 }
 
@@ -20,21 +24,19 @@ void _forceSoftReset(){
  *   Reset device, triggered by WatchDog interrupt (time-out)
  *
  *   Parameters:
-
+ *
  *   Returns:
  *
  */
 void resetHandler()
 {
     Console::log("ResetService: internal watch-dog reset... ");
+    // make sure all characters have been flushed to the console before rebooting
+    Console::flush( );
+
     //Add WDT time=out to reset-cause register
     RSTCTL->HARDRESET_SET |= RESET_HARD_WDTTIME;
-    // TODO: flush the serial port to make sure all characters have been trinted out before resetting
-    uint32_t d = MAP_CS_getMCLK() * 4 / 9600;
-    for(uint32_t k = 0; k < d;  k++)
-    {
-        __asm("  nop");
-    }
+
     // TODO: replace this with a power cycle to protect also the RS485 driver
     // for now, at least reset, till the power cycle gets implemented in HW
     // MAP_SysCtl_rebootDevice();
@@ -57,18 +59,12 @@ ResetService::ResetService(const unsigned long WDport, const unsigned long WDpin
     resetServiceStub = this;
 }
 
-ResetService::ResetService(const unsigned long WDport, const unsigned long WDpin, MB85RS* fram_in) :
-        WDIPort(WDport), WDIPin(WDpin){
-    resetServiceStub = this;
-}
-
-
 /**
  *
  *   ResetService Initialize watch-dog service and interrupts.
  *
  *   Parameters:
-
+ *
  *   Returns:
  *
  */
@@ -88,14 +84,7 @@ void ResetService::init()
 
     // start the timer
     MAP_WDT_A_startTimer();
-
-//    //get ResetStatus
-//    readResetStatus();
-//    readCSStatus();
-    //Superseded by HWMonitor
-
 }
-
 
 /**
  *
@@ -171,54 +160,39 @@ bool ResetService::process(DataMessage &command, DataMessage &workingBuffer)
 {
     if (command.getPayload()[0] == RESET_SERVICE)
     {
-        Console::log("ResetService: ");
         // prepare response frame
-        //workingBuffer.setDestination(command.getSource());
-        //workingBuffer.setSource(interface.getAddress());
         workingBuffer.setSize(3);
         workingBuffer.getPayload()[0] = RESET_SERVICE;
 
         if (command.getPayload()[1] == SERVICE_RESPONSE_REQUEST)
         {
-            Console::log("ResetRequest: ");
             workingBuffer.getPayload()[2] = command.getPayload()[2];
             switch(command.getPayload()[2])
             {
                 case RESET_SOFT:
                     workingBuffer.getPayload()[1] = SERVICE_RESPONSE_REPLY;
-                    // send response: doing it here to make sure
-                    // a response is sent before reset but not 2
-                    //interface.transmit(workingBuffer);
 
-                    // now reset the MCU
-                    Console::log("SofReset set?");
+                    // after a response has been sent, reset the MCU
                     this->setPostFunc(_forceSoftReset);
                     break;
 
                 case RESET_HARD:
                     workingBuffer.getPayload()[1] = SERVICE_RESPONSE_REPLY;
-                    // send response: doing it here to make sure
-                    // a response is sent before reset but not 2
-                    //interface.transmit(workingBuffer);
 
-                    // now force the external watch-dog to reset the MCU
+                    // after a response has been sent, force the external watch-dog to reset the MCU
                     this->setPostFunc(_forceHardReset);
                     break;
 
                     // not implemented yet, give error to notify it
                 /*case RESET_POWERCYCLE:
-                    serial.println("POWERCYCLE");
                     workingBuffer.getPayload()[1] = RESET_RESPONSE;
-                    // send response: doing it here to make sure
-                    // a response is sent before reset but not 2
-                    interface.transmit(workingBuffer);
+
+                    // after a response has been sent, force a power cycle
+                    this->setPostFunc(_forcePowerCycle);
                     break;*/
 
                 default:
                     workingBuffer.getPayload()[1] = SERVICE_RESPONSE_ERROR;
-                    // send response: doing it here to make sure
-                    // a response is sent before reset but not 2
-                    //interface.transmit(workingBuffer);
                     break;
             }
         }
@@ -226,9 +200,6 @@ bool ResetService::process(DataMessage &command, DataMessage &workingBuffer)
         {
             // unknown request
             workingBuffer.getPayload()[1] = RESET_ERROR;
-            // send response: doing it here to make sure
-            // a response is sent before reset but not 2
-            //interface.transmit(workingBuffer);
         }
 
         // command processed
@@ -254,12 +225,9 @@ bool ResetService::process(DataMessage &command, DataMessage &workingBuffer)
 void ResetService::forceHardReset()
 {
     Console::log("ResetService: Hard reset");
-    // TODO: flush the serial port to make sure all characters have been trinted out before resetting
-    uint32_t d = MAP_CS_getMCLK() * 4 / 9600;
-    for(uint32_t k = 0; k < d;  k++)
-    {
-        __asm("  nop");
-    }
+    // make sure all characters have been flushed to the console before rebooting
+    Console::flush( );
+
     // toggle the WDI pin 3 times, just to be sure
     // the external watch-dog resets...
     MAP_GPIO_setOutputHighOnPin( WDIPort, WDIPin );
@@ -282,12 +250,8 @@ void ResetService::forceHardReset()
 void ResetService::forceSoftReset()
 {
     Console::log("ResetService: Soft reset");
-    // TODO: flush the serial port to make sure all characters have been trinted out before resetting
-    uint32_t d = MAP_CS_getMCLK() * 4 / 9600;
-    for(uint32_t k = 0; k < d;  k++)
-    {
-        __asm("  nop");
-    }
+    // make sure all characters have been flushed to the console before rebooting
+    Console::flush( );
+
     MAP_SysCtl_rebootDevice();
 }
-
