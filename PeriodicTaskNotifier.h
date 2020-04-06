@@ -13,6 +13,7 @@
 
 #include "PeriodicTask.h"
 #include "DelfiPQCore.h"
+#include "Console.h"
 
 class PeriodicTaskNotifier
 {
@@ -26,6 +27,7 @@ private:
 public:
     PeriodicTaskNotifier(PeriodicTask** taskListIn, int nrOfTasks );
     void NotifyTasks();
+    void init();
 };
 
 

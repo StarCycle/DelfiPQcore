@@ -12,6 +12,7 @@
 PeriodicTaskNotifier *notifierStub;
 
 void NotifyTasks_stub(){
+
     //systick interrupt clears automatically.
     notifierStub->NotifyTasks();
 };
@@ -22,10 +23,18 @@ PeriodicTaskNotifier::PeriodicTaskNotifier(PeriodicTask** taskListIn, int nrOfTa
 
     count = FCLOCK/(1000/TASKNOTIFIER_PERIOD_MS);
     static_assert( (FCLOCK/(1000/TASKNOTIFIER_PERIOD_MS)) >> 24 == 0, "PeriodicTaskNotifier Period is only 24 bits!" ); //(assert this is less than 24 bits)
+}
+
+void PeriodicTaskNotifier::init(){
+
+    //Halt the Timer and clear the Interrupt flag for compatibility with previous SW versions.
+    //( which initializes this timer for periodicTask BEFORE jumping with the bootloader)
+    MAP_Timer32_clearInterruptFlag(TIMER32_0_BASE);
+    MAP_Timer32_haltTimer(TIMER32_0_BASE);
 
     MAP_SysTick_enableModule();
     MAP_SysTick_setPeriod(count);  // count is only 24-bits
-    MAP_SysTick_registerInterrupt(NotifyTasks_stub);
+    MAP_SysTick_registerInterrupt(&NotifyTasks_stub);
     MAP_SysTick_enableInterrupt();
 
     //clear the counter list
