@@ -629,8 +629,8 @@ void SoftwareUpdateService::setBootSlot(unsigned char slot, bool permanent) {
         fram->write(BOOTLOADER_TARGET_REG, &target_slot, 1);
         payload_size = 2;
         payload_data[COMMAND_RESPONSE] = SERVICE_RESPONSE_REPLY;
-        MAP_SysCtl_rebootDevice();
-        this->setPostFunc([](){ });
+
+        this->setPostFunc([](){ MAP_SysCtl_rebootDevice(); });
     } else {
         unsigned char slotFlag = 0;
         if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
@@ -649,7 +649,7 @@ void SoftwareUpdateService::setBootSlot(unsigned char slot, bool permanent) {
             fram->write(BOOTLOADER_TARGET_REG, &target_slot, 1);
             payload_size = 2;
             payload_data[COMMAND_RESPONSE] = SERVICE_RESPONSE_REPLY;
-            MAP_SysCtl_rebootDevice();
+
             this->setPostFunc([](){ MAP_SysCtl_rebootDevice();});
         } else return throw_error(SLOT_NOT_PROGRAMMED);
     }
