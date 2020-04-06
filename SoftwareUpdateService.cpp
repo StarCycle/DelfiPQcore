@@ -202,19 +202,21 @@ bool SoftwareUpdateService::process(DataMessage &command, DataMessage &workingBu
 void SoftwareUpdateService::getVersionNumber(){
     Console::log("SoftwareVersionService: Software Version Request");
     // respond to ping
+    payload_size = 2;
+    payload_data[COMMAND_RESPONSE] = SERVICE_RESPONSE_REPLY;
+    payload_data[2] = Bootloader::getCurrentSlot();
     if(this->hasVersionNumber == true){
-        payload_size = 10;
-        payload_data[COMMAND_RESPONSE] = SERVICE_RESPONSE_REPLY;
+        payload_size = 11;
         Console::log("Has SW Version: %x%x%x%x%x%x%x%x", versionNumber[0],versionNumber[1],versionNumber[2],versionNumber[3],versionNumber[4],versionNumber[5],versionNumber[6],versionNumber[7]);
-        payload_data[2] = this->versionNumber[0];
-        payload_data[3] = this->versionNumber[1];
-        payload_data[4] = this->versionNumber[2];
-        payload_data[5] = this->versionNumber[3];
-        payload_data[6] = this->versionNumber[4];
-        payload_data[7] = this->versionNumber[5];
-        payload_data[8] = this->versionNumber[6];
-        payload_data[9] = this->versionNumber[7];
-    }else return throw_error(NO_VERSION_NUMBER);
+        payload_data[3] = this->versionNumber[0];
+        payload_data[4] = this->versionNumber[1];
+        payload_data[5] = this->versionNumber[2];
+        payload_data[6] = this->versionNumber[3];
+        payload_data[7] = this->versionNumber[4];
+        payload_data[8] = this->versionNumber[5];
+        payload_data[9] = this->versionNumber[6];
+        payload_data[10] = this->versionNumber[7];
+    }
 }
 
 void SoftwareUpdateService::startOTA(unsigned char slot_number, bool allow_resume) {
