@@ -10,10 +10,10 @@
 
 #include "Service.h"
 #include "Task.h"
-#include "PingService.h"
+#include "Service.h"
 #include "Console.h"
 
-template <class Frame_Type>
+template <class Frame_Type, class Message_Type>
 class CommandHandler: public Task
 {
  protected:
@@ -21,7 +21,7 @@ class CommandHandler: public Task
      Service** services;
      int servicesCount;
      Frame_Type rxBuffer, txBuffer;
-     DataMessage rxMsg, txMsg;
+     Message_Type rxMsg, txMsg;
      void (*onValidCmd)( void );
 
      virtual void run()
@@ -92,7 +92,9 @@ class CommandHandler: public Task
      void received( DataFrame &newFrame )
      {
          newFrame.copy(rxBuffer);
-         notify();
+         if(rxMsg.getMessageType() == SERVICE_RESPONSE_REQUEST){
+             notify();
+         }
      };
 
      void onValidCommand(void (*function)( void ))

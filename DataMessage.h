@@ -31,6 +31,12 @@ public:
     unsigned char* getPayload(){
         return payloadBuffer;
     };
+
+    virtual void setMessageType(unsigned char resp) = 0;
+    virtual unsigned char getMessageType() = 0;
+    virtual void setService(unsigned char address) = 0;
+    virtual unsigned char getService() = 0;
+    virtual unsigned char* getDataPayload() = 0;
 };
 
 
