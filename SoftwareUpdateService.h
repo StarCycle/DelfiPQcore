@@ -166,7 +166,9 @@ enum error_codes{
     SLOT_NOT_EMPTY,
     SLOT_NOT_PROGRAMMED,
     SELF_ACTION,
-    NO_VERSION_NUMBER
+    NO_VERSION_NUMBER,
+    NO_REQUEST,
+    UNKNOWN_COMMAND
 };
 
 enum metadata_offset {

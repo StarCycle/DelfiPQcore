@@ -35,12 +35,10 @@ void resetHandler()
     Console::flush( );
 
     //Add WDT time=out to reset-cause register
-    RSTCTL->HARDRESET_SET |= RESET_HARD_WDTTIME;
-
     // TODO: replace this with a power cycle to protect also the RS485 driver
     // for now, at least reset, till the power cycle gets implemented in HW
     // MAP_SysCtl_rebootDevice();
-    MAP_ResetCtl_initiateHardReset();
+    MAP_ResetCtl_initiateHardResetWithSource(RESET_HARD_WDTTIME);
 }
 
 /**
@@ -253,5 +251,10 @@ void ResetService::forceSoftReset()
     // make sure all characters have been flushed to the console before rebooting
     Console::flush( );
 
+#if defined (__MSP432P401R__)
     MAP_SysCtl_rebootDevice();
+#elif defined (__MSP432P4111__)
+    MAP_SysCtl_A_rebootDevice();
+#endif
+
 }

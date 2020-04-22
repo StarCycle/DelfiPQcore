@@ -72,130 +72,140 @@ bool SoftwareUpdateService::process(DataMessage &command, DataMessage &workingBu
 
         if(command.getPayload()[COMMAND_METHOD] != ERASE_SLOT) state_flags &= ~ERASE_FLAG; //unset the Erase flag, if the command is not to erase.
 
-        switch (command.getPayload()[COMMAND_METHOD]) {
-        case START_OTA:
-            if((command.getSize() == PAYLOAD_SIZE_OFFSET + 1) || (command.getSize() == PAYLOAD_SIZE_OFFSET + 2)){
-                if(command.getPayload()[COMMAND_DATA] == 1 || command.getPayload()[COMMAND_DATA] == 2) {
-                    if(command.getSize() == PAYLOAD_SIZE_OFFSET + 2){
-                        startOTA(command.getPayload()[COMMAND_DATA], command.getPayload()[COMMAND_DATA+1] == 1);
-                    }else{
-                        startOTA(command.getPayload()[COMMAND_DATA], false);
-                    }
-
-                    if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) Console::log("OTA started!");
-
-                } else throw_error(SLOT_OUT_OF_RANGE);
-            } else throw_error(PARAMETER_MISMATCH);
-            break;
-
-        case SET_METADATA:
-            if(command.getSize() == METADATA_SIZE - 1 + PAYLOAD_SIZE_OFFSET) {
-                setMetadata(&(command.getPayload()[COMMAND_DATA]));
-                if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) Console::log("Metadata received!");
-
-            } else throw_error(PARAMETER_MISMATCH);
-            break;
-
-        case GET_METADATA:
-            if(command.getSize() == PAYLOAD_SIZE_OFFSET + 1) {
-                if(command.getPayload()[COMMAND_DATA] == 1 || command.getPayload()[COMMAND_DATA] == 2) {
-                    getMetadata(command.getPayload()[COMMAND_DATA] - 1);
-                    if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) {
-                        print_metadata(&payload_data[COMMAND_DATA]);
-                        Console::log("Metadata sent!");
-                    }
-                } else throw_error(SLOT_OUT_OF_RANGE);
-            } else throw_error(PARAMETER_MISMATCH);
-            break;
-
-        case SET_PARTIAL_CRCS:
-            if(command.getSize() <= BLOCK_SIZE + PAYLOAD_SIZE_OFFSET + 2) { //2 extra bytes for offset bytes
-//                serial.print("SIZE BYTE msB: ");
-//                serial.println(command.getPayload()[COMMAND_DATA + 1],DEC);
-//                serial.print("SIZE BYTE lsB: ");
-//                serial.println(command.getPayload()[COMMAND_DATA],DEC);
-//                serial.print("CRC OFFSET: ");
-//                serial.println(command.getPayload()[COMMAND_DATA] | (command.getPayload()[COMMAND_DATA + 1] << 8), DEC);
-                setPartialCRCs(&(command.getPayload()[COMMAND_DATA+2]), command.getSize() - (PAYLOAD_SIZE_OFFSET+2), command.getPayload()[COMMAND_DATA] | (command.getPayload()[COMMAND_DATA + 1] << 8));
-                if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) Console::log("CRC!");
-            } else throw_error(PARAMETER_MISMATCH);
-            break;
-
-        case SET_BLOCK:
-            if(command.getSize() <= BLOCK_SIZE + 2 + PAYLOAD_SIZE_OFFSET) {
-                Console::log("BLOCK!");
-                setBlock(&(command.getPayload()[COMMAND_DATA + 2]), command.getPayload()[COMMAND_DATA] | (command.getPayload()[COMMAND_DATA + 1] << 8));
-                if(payload_data[COMMAND_RESPONSE] == COMMAND_ERROR) Console::log("ERROR!");
-            } else throw_error(PARAMETER_MISMATCH);
-            break;
-
-        case CHECK_MD5:
-            if(command.getSize() == PAYLOAD_SIZE_OFFSET + 1) {
-                if(command.getPayload()[COMMAND_DATA] == 1 || command.getPayload()[COMMAND_DATA] == 2) {
-                    checkMD5(command.getPayload()[COMMAND_DATA]);
-                    if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) Console::log("MD5 is correct!");
-                } else throw_error(SLOT_OUT_OF_RANGE);
-            } else throw_error(PARAMETER_MISMATCH);
-            break;
-
-        case STOP_OTA:
-            if(command.getSize() == PAYLOAD_SIZE_OFFSET) {
-                stopOTA();
-                if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) Console::log("OTA is stopped!");
-            } else throw_error(PARAMETER_MISMATCH);
-            break;
-
-        case ERASE_SLOT:
-            if(command.getSize() == PAYLOAD_SIZE_OFFSET + 1) {
-                if((state_flags & ERASE_FLAG) == 0) {
+        if(command.getPayload()[COMMAND_RESPONSE] == SERVICE_RESPONSE_REQUEST){
+            switch (command.getPayload()[COMMAND_METHOD]) {
+            case START_OTA:
+                if((command.getSize() == PAYLOAD_SIZE_OFFSET + 1) || (command.getSize() == PAYLOAD_SIZE_OFFSET + 2)){
                     if(command.getPayload()[COMMAND_DATA] == 1 || command.getPayload()[COMMAND_DATA] == 2) {
-                        slot_erase = command.getPayload()[COMMAND_DATA];
-                        state_flags |= ERASE_FLAG;
-                        Console::log("Are you sure(13)?");
+                        if(command.getSize() == PAYLOAD_SIZE_OFFSET + 2){
+                            startOTA(command.getPayload()[COMMAND_DATA], command.getPayload()[COMMAND_DATA+1] == 1);
+                        }else{
+                            startOTA(command.getPayload()[COMMAND_DATA], false);
+                        }
+
+                        if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) Console::log("OTA started!");
+
                     } else throw_error(SLOT_OUT_OF_RANGE);
-                } else {
-                    if(command.getPayload()[COMMAND_DATA] == ACKNOWLEDGE) {
-                        eraseSlot(slot_erase);
-                        if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) Console::log("Slot is erased!");
-                    } else throw_error(PARAMETER_MISMATCH);
-                }
-            } else throw_error(PARAMETER_MISMATCH);
-            break;
-        case SET_BOOT_SLOT:
-            if(command.getSize() == PAYLOAD_SIZE_OFFSET + 2) {
-                if(command.getPayload()[COMMAND_DATA] < 3) {
-                    setBootSlot(command.getPayload()[COMMAND_DATA], command.getPayload()[COMMAND_DATA + 1]);
-                    if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) Console::log("Slot code executed successfully!");
-                } else throw_error(SLOT_OUT_OF_RANGE);
-            } else throw_error(PARAMETER_MISMATCH);
-            break;
-        case GET_MISSED_BLOCKS:
-            if(command.getSize() == PAYLOAD_SIZE_OFFSET) {
-                getMissedBlocks();
-            } else throw_error(PARAMETER_MISMATCH);
-            break;
-        case GET_MISSED_CRC:
-            if(command.getSize() == PAYLOAD_SIZE_OFFSET) {
-                getMissedCRCs();
-            } else throw_error(PARAMETER_MISMATCH);
-            break;
-        case GET_VERSION_NUMBER:
-            if(command.getSize() == PAYLOAD_SIZE_OFFSET) {
-                getVersionNumber();
-            } else throw_error(PARAMETER_MISMATCH);
-            break;
-        default:
-            break;
+                } else throw_error(PARAMETER_MISMATCH);
+                break;
+
+            case SET_METADATA:
+                if(command.getSize() == METADATA_SIZE - 1 + PAYLOAD_SIZE_OFFSET) {
+                    setMetadata(&(command.getPayload()[COMMAND_DATA]));
+                    if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) Console::log("Metadata received!");
+
+                } else throw_error(PARAMETER_MISMATCH);
+                break;
+
+            case GET_METADATA:
+                if(command.getSize() == PAYLOAD_SIZE_OFFSET + 1) {
+                    if(command.getPayload()[COMMAND_DATA] == 1 || command.getPayload()[COMMAND_DATA] == 2) {
+                        getMetadata(command.getPayload()[COMMAND_DATA] - 1);
+                        if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) {
+                            print_metadata(&payload_data[COMMAND_DATA]);
+                            Console::log("Metadata sent!");
+                        }
+                    } else throw_error(SLOT_OUT_OF_RANGE);
+                } else throw_error(PARAMETER_MISMATCH);
+                break;
+
+            case SET_PARTIAL_CRCS:
+                if(command.getSize() <= BLOCK_SIZE + PAYLOAD_SIZE_OFFSET + 2) { //2 extra bytes for offset bytes
+    //                serial.print("SIZE BYTE msB: ");
+    //                serial.println(command.getPayload()[COMMAND_DATA + 1],DEC);
+    //                serial.print("SIZE BYTE lsB: ");
+    //                serial.println(command.getPayload()[COMMAND_DATA],DEC);
+    //                serial.print("CRC OFFSET: ");
+    //                serial.println(command.getPayload()[COMMAND_DATA] | (command.getPayload()[COMMAND_DATA + 1] << 8), DEC);
+                    setPartialCRCs(&(command.getPayload()[COMMAND_DATA+2]), command.getSize() - (PAYLOAD_SIZE_OFFSET+2), command.getPayload()[COMMAND_DATA] | (command.getPayload()[COMMAND_DATA + 1] << 8));
+                    if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) Console::log("CRC!");
+                } else throw_error(PARAMETER_MISMATCH);
+                break;
+
+            case SET_BLOCK:
+                if(command.getSize() <= BLOCK_SIZE + 2 + PAYLOAD_SIZE_OFFSET) {
+                    Console::log("BLOCK!");
+                    setBlock(&(command.getPayload()[COMMAND_DATA + 2]), command.getPayload()[COMMAND_DATA] | (command.getPayload()[COMMAND_DATA + 1] << 8));
+                    if(payload_data[COMMAND_RESPONSE] == COMMAND_ERROR) Console::log("ERROR!");
+                } else throw_error(PARAMETER_MISMATCH);
+                break;
+
+            case CHECK_MD5:
+                if(command.getSize() == PAYLOAD_SIZE_OFFSET + 1) {
+                    if(command.getPayload()[COMMAND_DATA] == 1 || command.getPayload()[COMMAND_DATA] == 2) {
+                        checkMD5(command.getPayload()[COMMAND_DATA]);
+                        if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) Console::log("MD5 is correct!");
+                    } else throw_error(SLOT_OUT_OF_RANGE);
+                } else throw_error(PARAMETER_MISMATCH);
+                break;
+
+            case STOP_OTA:
+                if(command.getSize() == PAYLOAD_SIZE_OFFSET) {
+                    stopOTA();
+                    if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) Console::log("OTA is stopped!");
+                } else throw_error(PARAMETER_MISMATCH);
+                break;
+
+            case ERASE_SLOT:
+                if(command.getSize() == PAYLOAD_SIZE_OFFSET + 1) {
+                    if((state_flags & ERASE_FLAG) == 0) {
+                        if(command.getPayload()[COMMAND_DATA] == 1 || command.getPayload()[COMMAND_DATA] == 2) {
+                            slot_erase = command.getPayload()[COMMAND_DATA];
+                            state_flags |= ERASE_FLAG;
+                            Console::log("Are you sure(13)?");
+                        } else throw_error(SLOT_OUT_OF_RANGE);
+                    } else {
+                        if(command.getPayload()[COMMAND_DATA] == ACKNOWLEDGE) {
+                            eraseSlot(slot_erase);
+                            if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) Console::log("Slot is erased!");
+                        } else throw_error(PARAMETER_MISMATCH);
+                    }
+                } else throw_error(PARAMETER_MISMATCH);
+                break;
+            case SET_BOOT_SLOT:
+                if(command.getSize() == PAYLOAD_SIZE_OFFSET + 2) {
+                    if(command.getPayload()[COMMAND_DATA] < 3) {
+                        setBootSlot(command.getPayload()[COMMAND_DATA], command.getPayload()[COMMAND_DATA + 1]);
+                        if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) Console::log("Slot code executed successfully!");
+                    } else throw_error(SLOT_OUT_OF_RANGE);
+                } else throw_error(PARAMETER_MISMATCH);
+                break;
+            case GET_MISSED_BLOCKS:
+                if(command.getSize() == PAYLOAD_SIZE_OFFSET) {
+                    getMissedBlocks();
+                } else throw_error(PARAMETER_MISMATCH);
+                break;
+            case GET_MISSED_CRC:
+                if(command.getSize() == PAYLOAD_SIZE_OFFSET) {
+                    getMissedCRCs();
+                } else throw_error(PARAMETER_MISMATCH);
+                break;
+            case GET_VERSION_NUMBER:
+                if(command.getSize() == PAYLOAD_SIZE_OFFSET) {
+                    getVersionNumber();
+                } else throw_error(PARAMETER_MISMATCH);
+                break;
+            default:
+                workingBuffer.getPayload()[COMMAND_RESPONSE] = SERVICE_RESPONSE_ERROR;
+                workingBuffer.getPayload()[2] = UNKNOWN_COMMAND;
+                workingBuffer.setSize(3);
+                break;
+            }
+
+            workingBuffer.setSize(payload_size);
+
+            // command processed
+            return true;
+        } else {
+            // this command is related to another service,
+            // report the command was not processed
+            return false;
         }
-
-        workingBuffer.setSize(payload_size);
-
-        // command processed
+    }else{
+        workingBuffer.getPayload()[COMMAND_RESPONSE] = SERVICE_RESPONSE_ERROR;
+        workingBuffer.getPayload()[2] = NO_REQUEST;
+        workingBuffer.setSize(3);
         return true;
-    } else {
-        // this command is related to another service,
-        // report the command was not processed
-        return false;
     }
 }
 
@@ -428,11 +438,35 @@ void SoftwareUpdateService::setBlock(unsigned char* data_block, uint16_t block_o
                     //check if CRC matches
                     if(checkPartialCRC(data_block, block_offset)) {
                         //write block to FLASH
+                        unsigned int memloc;
                         unsigned int sector =  1 << (((block_offset * BLOCK_SIZE + (update_slot - 1) * SLOT_SIZE)) / SECTOR_SIZE);
+#if defined (__MSP432P401R__)
                         if(!MAP_FlashCtl_unprotectSector(FLASH_MAIN_MEMORY_SPACE_BANK1, sector)) return throw_error(NO_SLOT_ACCESS);
-                        if(!MAP_FlashCtl_programMemory(data_block, (void*)(BANK1_ADDRESS + (update_slot - 1) * SLOT_SIZE + block_offset * BLOCK_SIZE), BLOCK_SIZE)) return throw_error(NO_SLOT_ACCESS);
-                        if(!MAP_FlashCtl_protectSector(FLASH_MAIN_MEMORY_SPACE_BANK1, sector)) return throw_error(NO_SLOT_ACCESS);
+#elif defined (__MSP432P4111__)
+                        //convert sector back to memory location
+                        // memloc = offset_bank1 + sector * sector_size
+                        memloc = (FLASH_A_MAIN_MEMORY_SPACE_BANK1 + (update_slot - 1) * SLOT_SIZE + block_offset * BLOCK_SIZE);
+                        // this looks like a weird construction, however memory is appearantly still sector based:
+                        // http://dev.ti.com/tirex/explore/node?node=ACjtNKxGz96GtFvTawWu-g__z-lQYNj__LATEST
+                        if(!MAP_FlashCtl_A_unprotectMemory(memloc, memloc + BLOCK_SIZE)) return throw_error(NO_SLOT_ACCESS);
+#endif
 
+#if defined (__MSP432P401R__)
+                        if(!MAP_FlashCtl_programMemory(data_block, (void*)(BANK1_ADDRESS + (update_slot - 1) * SLOT_SIZE + block_offset * BLOCK_SIZE), BLOCK_SIZE)) return throw_error(NO_SLOT_ACCESS);
+#elif defined (__MSP432P4111__)
+                        if(!MAP_FlashCtl_A_programMemory(data_block, (void*)(FLASH_A_MAIN_MEMORY_SPACE_BANK1 + (update_slot - 1) * SLOT_SIZE + block_offset * BLOCK_SIZE), BLOCK_SIZE)) return throw_error(NO_SLOT_ACCESS);
+#endif
+
+#if defined (__MSP432P401R__)
+                        if(!MAP_FlashCtl_protectSector(FLASH_MAIN_MEMORY_SPACE_BANK1, sector)) return throw_error(NO_SLOT_ACCESS);
+#elif defined (__MSP432P4111__)
+                        //convert sector back to memory location
+                        // memloc = offset_bank1 + sector * sector_size
+                        memloc = (FLASH_A_MAIN_MEMORY_SPACE_BANK1 + (update_slot - 1) * SLOT_SIZE + block_offset * BLOCK_SIZE);
+                        // this looks like a weird construction, however memory is appearantly still sector based:
+                        // http://dev.ti.com/tirex/explore/node?node=ACjtNKxGz96GtFvTawWu-g__z-lQYNj__LATEST
+                        if(!MAP_FlashCtl_A_protectMemory(memloc, memloc + BLOCK_SIZE)) return throw_error(NO_SLOT_ACCESS);
+#endif
                         //update checklist in RAM
                         blocks_received[block_offset / BYTE_SIZE] |= (1 << (block_offset) % BYTE_SIZE);
 
@@ -607,10 +641,36 @@ void SoftwareUpdateService::eraseSlot(unsigned char slot) {
                fram->write(SLOT2_METADATA, empty, METADATA_SIZE);
            }
 
+           unsigned int memloc;
+
            //mass erase flash
+#if defined (__MSP432P401R__)
            if(!MAP_FlashCtl_unprotectSector(FLASH_MAIN_MEMORY_SPACE_BANK1, 0xFFFF << (16 * (slot - 1)))) return throw_error(NO_SLOT_ACCESS);
+#elif defined (__MSP432P4111__)
+           //convert sector back to memory location
+           // memloc = offset_bank1 + sector * sector_size
+           memloc = FLASH_A_MAIN_MEMORY_SPACE_BANK1 + (slot - 1) * SLOT_SIZE;
+           // this looks like a weird construction, however memory is appearantly still sector based:
+           // http://dev.ti.com/tirex/explore/node?node=ACjtNKxGz96GtFvTawWu-g__z-lQYNj__LATEST
+           if(!MAP_FlashCtl_A_unprotectMemory(memloc, memloc + SLOT_SIZE)) return throw_error(NO_SLOT_ACCESS);
+#endif
+
+#if defined (__MSP432P401R__)
            if(!MAP_FlashCtl_performMassErase()) return throw_error(NO_SLOT_ACCESS);
+#elif defined (__MSP432P4111__)
+           if(!MAP_FlashCtl_A_performMassErase()) return throw_error(NO_SLOT_ACCESS);
+#endif
+
+#if defined (__MSP432P401R__)
            if(!MAP_FlashCtl_protectSector(FLASH_MAIN_MEMORY_SPACE_BANK1, 0xFFFF << (16 * (slot - 1)))) return throw_error(NO_SLOT_ACCESS);
+#elif defined (__MSP432P4111__)
+           //convert sector back to memory location
+           // memloc = offset_bank1 + sector * sector_size
+           memloc = FLASH_A_MAIN_MEMORY_SPACE_BANK1 + (slot - 1) * SLOT_SIZE;
+           // this looks like a weird construction, however memory is appearantly still sector based:
+           // http://dev.ti.com/tirex/explore/node?node=ACjtNKxGz96GtFvTawWu-g__z-lQYNj__LATEST
+           if(!MAP_FlashCtl_A_protectMemory(memloc, memloc + SLOT_SIZE)) return throw_error(NO_SLOT_ACCESS);
+#endif
 
            state_flags = 0; //destroy progress flag
            if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
@@ -629,8 +689,12 @@ void SoftwareUpdateService::setBootSlot(unsigned char slot, bool permanent) {
         fram->write(BOOTLOADER_TARGET_REG, &target_slot, 1);
         payload_size = 2;
         payload_data[COMMAND_RESPONSE] = SERVICE_RESPONSE_REPLY;
-
+#if defined (__MSP432P401R__)
         this->setPostFunc([](){ MAP_SysCtl_rebootDevice(); });
+#elif defined (__MSP432P4111__)
+        this->setPostFunc([](){ MAP_SysCtl_A_rebootDevice(); });
+#endif
+
     } else {
         unsigned char slotFlag = 0;
         if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
@@ -650,7 +714,11 @@ void SoftwareUpdateService::setBootSlot(unsigned char slot, bool permanent) {
             payload_size = 2;
             payload_data[COMMAND_RESPONSE] = SERVICE_RESPONSE_REPLY;
 
+#if defined (__MSP432P401R__)
             this->setPostFunc([](){ MAP_SysCtl_rebootDevice();});
+#elif defined (__MSP432P4111__)
+            this->setPostFunc([](){ MAP_SysCtl_A_rebootDevice();});
+#endif
         } else return throw_error(SLOT_NOT_PROGRAMMED);
     }
 }

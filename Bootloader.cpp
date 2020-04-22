@@ -115,7 +115,11 @@ void Bootloader::JumpSlot(){
                         Console::log("+ BOOTLOADER - Error: target slot not valid!");
                         target_slot = BOOT_PERMANENT_FLAG; //set target to 0 and reboot
                         this->fram->write(BOOTLOADER_TARGET_REG, &target_slot, 1);
+#if defined (__MSP432P401R__)
                         MAP_SysCtl_rebootDevice();
+#elif defined (__MSP432P4111__)
+                        MAP_SysCtl_A_rebootDevice();
+#endif
                         break;
                 }
                 Console::log("Jumping to: 0x%x", (int) *resetPtr);

@@ -58,10 +58,17 @@ float ADCManager::getTempMeasurement(){
         int16_t conRes;
         uint64_t status;
 
-        cal30 = MAP_SysCtl_getTempCalibrationConstant(SYSCTL_2_5V_REF,
-                SYSCTL_30_DEGREES_C);
-        cal85 = MAP_SysCtl_getTempCalibrationConstant(SYSCTL_2_5V_REF,
-                SYSCTL_85_DEGREES_C);
+        #if defined (__MSP432P401R__)
+            cal30 = MAP_SysCtl_getTempCalibrationConstant(SYSCTL_2_5V_REF,
+                        SYSCTL_30_DEGREES_C);
+            cal85 = MAP_SysCtl_getTempCalibrationConstant(SYSCTL_2_5V_REF,
+                        SYSCTL_85_DEGREES_C);
+        #elif defined (__MSP432P4111__)
+            cal30 = MAP_SysCtl_A_getTempCalibrationConstant(SYSCTL_A_2_5V_REF,
+                        SYSCTL_A_30_DEGREES_C);
+            cal85 = MAP_SysCtl_A_getTempCalibrationConstant(SYSCTL_A_2_5V_REF,
+                        SYSCTL_A_85_DEGREES_C);
+        #endif
         calDifference = cal85 - cal30;
 
         conRes = ((MAP_ADC14_getResult(ADC_MEM0) - cal30) * 55);

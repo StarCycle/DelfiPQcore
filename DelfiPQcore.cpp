@@ -27,8 +27,14 @@ void DelfiPQcore::initMCU( void )
     MAP_CS_setExternalClockSourceFrequency(SCLOCK, FCLOCK);
 
     MAP_PCM_setCoreVoltageLevel(PCM_VCORE1);
+
+#if defined (__MSP432P401R__)
     MAP_FlashCtl_setWaitState(FLASH_BANK0, 2);
     MAP_FlashCtl_setWaitState(FLASH_BANK1, 2);
+#elif defined (__MSP432P4111__)
+    MAP_FlashCtl_A_setWaitState(FLASH_A_BANK0, 2);
+    MAP_FlashCtl_A_setWaitState(FLASH_A_BANK1, 2);
+#endif
 
     uint32_t clock;
     if( CS_startHFXTWithTimeout(false, 100000) )
