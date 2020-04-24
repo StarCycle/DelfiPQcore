@@ -13,6 +13,9 @@
 #include "Service.h"
 #include "Console.h"
 
+#define ERROR_UNKNOWN_SERVICE       1
+
+
 template <class Frame_Type, class Message_Type>
 class CommandHandler: public Task
 {
@@ -72,10 +75,10 @@ class CommandHandler: public Task
              // invalid payload size
              // what should we do here?
              Console::log("Invalid Command, size must be > 1");
-             txBuffer.setService(0);
-             txBuffer.setMessageType(SERVICE_RESPONSE_REPLY);
-             txBuffer.getDataPayload()[0] = 1;
-             txBuffer.setPayloadSize(1);
+             txMsg.setService(0);
+             txMsg.setMessageType(SERVICE_RESPONSE_REPLY);
+             txMsg.setPayloadSize(1);
+             txMsg.getDataPayload()[0] = ERROR_UNKNOWN_SERVICE;
 
              bus.transmit(txBuffer);
              return;

@@ -40,6 +40,12 @@ public:
 
     virtual void setPayloadSize(unsigned int size) = 0;
     virtual unsigned int getPayloadSize() = 0;
+
+    //This should become deprecated ASAP, as the naming became confusing,
+    //Its available for now for older services.
+    virtual unsigned char* getPayload(){
+        return getBuffer();
+    };
 };
 
 
