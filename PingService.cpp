@@ -23,28 +23,16 @@
  */
 bool PingService::process(DataMessage &command, DataMessage &workingBuffer)
 {
-    if (command.getPayload()[0] == PING_SERVICE) //Check if this frame is directed to this service
+    if (command.getService() == PING_SERVICE) //Check if this frame is directed to this service
     {
         // prepare response frame
-        //workingBuffer.setDestination(command.getSource());
-        //workingBuffer.setSource(interface.getAddress());
-        workingBuffer.setSize(command.getSize());
-        workingBuffer.getPayload()[0] = PING_SERVICE;
 
-        if (command.getPayload()[1] == SERVICE_RESPONSE_REQUEST)
-        {
-            Console::log("PingService: Ping Request");
-            // respond to ping
-            workingBuffer.getPayload()[1] = SERVICE_RESPONSE_REPLY;
-        }
-        else
-        {
-            // unknown request
-            workingBuffer.getPayload()[1] = SERVICE_RESPONSE_ERROR;
-        }
+        workingBuffer.setService(PING_SERVICE);
+        workingBuffer.setMessageType(SERVICE_RESPONSE_REPLY);
+        workingBuffer.setPayloadSize(command.getPayloadSize());
 
-        // send response
-        //interface.transmit(workingBuffer);
+        Console::log("PingService: Ping Request");
+
         // command processed
         return true;
     }
