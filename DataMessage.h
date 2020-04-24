@@ -11,25 +11,25 @@
 class DataMessage
 {
 private:
-    unsigned char *payloadBuffer;
-    unsigned int payloadSize;
+    unsigned char *MessageBuffer;
+    unsigned int MessageSize;
 
 public:
     DataMessage(){
-        payloadBuffer = 0;
-        payloadSize = 0;
+        MessageBuffer = 0;
+        MessageSize = 0;
     };
     void setPointer(unsigned char *payloadBufferLocation){
-        payloadBuffer = payloadBufferLocation;
+        MessageBuffer = payloadBufferLocation;
     };
     void setSize(unsigned int size){
-        payloadSize = size;
+        MessageSize = size;
     };
     unsigned int getSize(){
-        return payloadSize;
+        return MessageSize;
     };
-    unsigned char* getPayload(){
-        return payloadBuffer;
+    unsigned char* getBuffer(){
+        return MessageBuffer;
     };
 
     virtual void setMessageType(unsigned char resp) = 0;
@@ -37,6 +37,9 @@ public:
     virtual void setService(unsigned char address) = 0;
     virtual unsigned char getService() = 0;
     virtual unsigned char* getDataPayload() = 0;
+
+    virtual void setPayloadSize(unsigned int size) = 0;
+    virtual unsigned int getPayloadSize() = 0;
 };
 
 
