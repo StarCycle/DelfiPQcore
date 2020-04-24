@@ -43,7 +43,7 @@ public:
 
     //This should become deprecated ASAP, as the naming became confusing,
     //Its available for now for older services.
-    virtual unsigned char* getPayload(){
+    unsigned char* getPayload(){
         return getBuffer();
     };
 };
