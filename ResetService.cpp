@@ -9,6 +9,11 @@
 
 ResetService* resetServiceStub;
 
+void _forcePowerCycle()
+{
+    resetServiceStub->forcePowerCycle();
+}
+
 void _forceHardReset()
 {
     resetServiceStub->forceHardReset();
@@ -34,11 +39,7 @@ void resetHandler()
     // make sure all characters have been flushed to the console before rebooting
     Console::flush( );
 
-    //Add WDT time=out to reset-cause register
-    // TODO: replace this with a power cycle to protect also the RS485 driver
-    // for now, at least reset, till the power cycle gets implemented in HW
-    // MAP_SysCtl_rebootDevice();
-    MAP_ResetCtl_initiateHardResetWithSource(RESET_HARD_WDTTIME);
+    resetServiceStub->forcePowerCycle();
 }
 
 /**
@@ -53,7 +54,26 @@ void resetHandler()
  *
  */
 ResetService::ResetService(const unsigned long WDport, const unsigned long WDpin) :
-        WDIPort(WDport), WDIPin(WDpin) {
+        WDIPort(WDport), WDIPin(WDpin), ERPort(0), ERPin(0) {
+    resetServiceStub = this;
+}
+
+/**
+ *
+ *   ResetService Constructor
+ *
+ *   Parameters:
+ *   WDport                     External watch-dog reset port
+ *   WDpin                      External watch-dog reset pin
+ *   ERport                     External reset port
+ *   ERpin                      External reset pin
+ *
+ *   Returns:
+ *
+ */
+ResetService::ResetService(const unsigned long WDport, const unsigned long WDpin,
+                           const unsigned long Rport, const unsigned long Rpin) :
+        WDIPort(WDport), WDIPin(WDpin), ERPort(Rport), ERPin(Rpin) {
     resetServiceStub = this;
 }
 
@@ -76,9 +96,13 @@ void ResetService::init()
     // select the interrupt handler
     MAP_WDT_A_registerInterrupt(&resetHandler);
 
-    // initialize external watch-dog pins
+    // initialize external watch-dog pin
     MAP_GPIO_setOutputLowOnPin( WDIPort, WDIPin );
     MAP_GPIO_setAsOutputPin( WDIPort, WDIPin );
+
+    // initialize power cycle pin
+    MAP_GPIO_setOutputHighOnPin( ERPort, ERPin );
+    MAP_GPIO_setAsOutputPin( ERPort, ERPin );
 
     // start the timer
     MAP_WDT_A_startTimer();
@@ -181,13 +205,12 @@ bool ResetService::process(DataMessage &command, DataMessage &workingBuffer)
                     this->setPostFunc(_forceHardReset);
                     break;
 
-                    // not implemented yet, give error to notify it
-                /*case RESET_POWERCYCLE:
-                    workingBuffer.getPayload()[1] = RESET_RESPONSE;
+                case RESET_POWERCYCLE:
+                    workingBuffer.getPayload()[1] = SERVICE_RESPONSE_REPLY;
 
                     // after a response has been sent, force a power cycle
                     this->setPostFunc(_forcePowerCycle);
-                    break;*/
+                    break;
 
                 default:
                     workingBuffer.getPayload()[1] = SERVICE_RESPONSE_ERROR;
@@ -208,6 +231,35 @@ bool ResetService::process(DataMessage &command, DataMessage &workingBuffer)
         // this command is related to another service,
         // report the command was not processed
         return false;
+    }
+}
+
+/**
+ *
+ *   Force a full board power cycle
+ *
+ *   Parameters:
+ *
+ *   Returns:
+ *
+ */
+void ResetService::forcePowerCycle()
+{
+    Console::log("ResetService: Power Cycle");
+    // make sure all characters have been flushed to the console before rebooting
+    Console::flush( );
+
+    // if the power-cycle command is supported by the hardware,
+    // trigger a power-cycle
+    if (ERPort != 0)
+    {
+        MAP_GPIO_setOutputLowOnPin( ERPort, ERPin );
+    }
+    else
+    {
+        // Otherwise trigger a hard reset
+        // Add WDT time-out to reset-cause register
+        MAP_ResetCtl_initiateHardResetWithSource(RESET_HARD_WDTTIME);
     }
 }
 
