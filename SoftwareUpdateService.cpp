@@ -57,50 +57,47 @@ SoftwareUpdateService::SoftwareUpdateService(MB85RS &fram_in) {
 }
 
 bool SoftwareUpdateService::process(DataMessage &command, DataMessage &workingBuffer) {
-    if (command.getPayload()[COMMAND_SERVICE] == SOFTWAREUPDATE_SERVICE) {
+    if (command.getService() == SOFTWAREUPDATE_SERVICE) {
         // prepare response frame
 //        workingBuffer.setDestination(command.getSource());
 //        workingBuffer.setSource(interface.getAddress());
-        workingBuffer.setSize(PAYLOAD_SIZE_OFFSET);
-        workingBuffer.getPayload()[COMMAND_SERVICE] = SOFTWAREUPDATE_SERVICE;
-        workingBuffer.getPayload()[COMMAND_RESPONSE] = COMMAND_REPLY;
-        workingBuffer.getPayload()[COMMAND_METHOD] = command.getPayload()[COMMAND_METHOD];
+        workingBuffer.setService(SOFTWAREUPDATE_SERVICE);
+        workingBuffer.setMessageType(SERVICE_RESPONSE_REPLY);
 
-        payload_data = workingBuffer.getPayload();
-        payload_size = PAYLOAD_SIZE_OFFSET;
-        payload_data[COMMAND_SERVICE] = SOFTWAREUPDATE_SERVICE;
+        payload_data = workingBuffer.getDataPayload();
 
-        if(command.getPayload()[COMMAND_METHOD] != ERASE_SLOT) state_flags &= ~ERASE_FLAG; //unset the Erase flag, if the command is not to erase.
+        if(command.getDataPayload()[COMMAND_METHOD] != ERASE_SLOT) state_flags &= ~ERASE_FLAG; //unset the Erase flag, if the command is not to erase.
 
-        switch (command.getPayload()[COMMAND_METHOD]) {
+        switch (command.getDataPayload()[COMMAND_METHOD]) {
+
         case START_OTA:
-            if((command.getSize() == PAYLOAD_SIZE_OFFSET + 1) || (command.getSize() == PAYLOAD_SIZE_OFFSET + 2)){
-                if(command.getPayload()[COMMAND_DATA] == 1 || command.getPayload()[COMMAND_DATA] == 2) {
-                    if(command.getSize() == PAYLOAD_SIZE_OFFSET + 2){
-                        startOTA(command.getPayload()[COMMAND_DATA], command.getPayload()[COMMAND_DATA+1] == 1);
+            if((command.getPayloadSize() == 2) || (command.getPayloadSize() == 3)){
+                if(command.getDataPayload()[COMMAND_DATA] == 1 || command.getDataPayload()[COMMAND_DATA] == 2) {
+                    if(command.getPayloadSize() == 2){
+                        startOTA(command.getDataPayload()[COMMAND_DATA], command.getDataPayload()[COMMAND_DATA+1] == 1);
                     }else{
-                        startOTA(command.getPayload()[COMMAND_DATA], false);
+                        startOTA(command.getDataPayload()[COMMAND_DATA], false);
                     }
 
-                    if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) Console::log("OTA started!");
+                    if(payload_data[0] == NO_ERROR) Console::log("OTA started!");
 
                 } else throw_error(SLOT_OUT_OF_RANGE);
             } else throw_error(PARAMETER_MISMATCH);
             break;
 
         case SET_METADATA:
-            if(command.getSize() == METADATA_SIZE - 1 + PAYLOAD_SIZE_OFFSET) {
-                setMetadata(&(command.getPayload()[COMMAND_DATA]));
-                if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) Console::log("Metadata received!");
+            if(command.getPayloadSize() == METADATA_SIZE) {
+                setMetadata(&(command.getDataPayload()[COMMAND_DATA]));
+                if(payload_data[0] == NO_ERROR) Console::log("Metadata received!");
 
             } else throw_error(PARAMETER_MISMATCH);
             break;
 
         case GET_METADATA:
-            if(command.getSize() == PAYLOAD_SIZE_OFFSET + 1) {
-                if(command.getPayload()[COMMAND_DATA] == 1 || command.getPayload()[COMMAND_DATA] == 2) {
-                    getMetadata(command.getPayload()[COMMAND_DATA] - 1);
-                    if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) {
+            if(command.getPayloadSize() == 2) {
+                if(command.getDataPayload()[COMMAND_DATA] == 1 || command.getDataPayload()[COMMAND_DATA] == 2) {
+                    getMetadata(command.getDataPayload()[COMMAND_DATA] - 1);
+                    if(payload_data[0] == NO_ERROR) {
                         print_metadata(&payload_data[COMMAND_DATA]);
                         Console::log("Metadata sent!");
                     }
@@ -109,78 +106,78 @@ bool SoftwareUpdateService::process(DataMessage &command, DataMessage &workingBu
             break;
 
         case SET_PARTIAL_CRCS:
-            if(command.getSize() <= BLOCK_SIZE + PAYLOAD_SIZE_OFFSET + 2) { //2 extra bytes for offset bytes
+            if(command.getPayloadSize() <= BLOCK_SIZE + 2 + 1) { //2 extra bytes for offset bytes
 //                serial.print("SIZE BYTE msB: ");
 //                serial.println(command.getPayload()[COMMAND_DATA + 1],DEC);
 //                serial.print("SIZE BYTE lsB: ");
 //                serial.println(command.getPayload()[COMMAND_DATA],DEC);
 //                serial.print("CRC OFFSET: ");
 //                serial.println(command.getPayload()[COMMAND_DATA] | (command.getPayload()[COMMAND_DATA + 1] << 8), DEC);
-                setPartialCRCs(&(command.getPayload()[COMMAND_DATA+2]), command.getSize() - (PAYLOAD_SIZE_OFFSET+2), command.getPayload()[COMMAND_DATA] | (command.getPayload()[COMMAND_DATA + 1] << 8));
-                if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) Console::log("CRC!");
+                setPartialCRCs(&(command.getDataPayload()[COMMAND_DATA+2]), command.getPayloadSize() - 3, command.getDataPayload()[COMMAND_DATA] | (command.getDataPayload()[COMMAND_DATA + 1] << 8));
+                if(payload_data[0] == NO_ERROR) Console::log("CRC!");
             } else throw_error(PARAMETER_MISMATCH);
             break;
 
         case SET_BLOCK:
-            if(command.getSize() <= BLOCK_SIZE + 2 + PAYLOAD_SIZE_OFFSET) {
-                Console::log("BLOCK!");
-                setBlock(&(command.getPayload()[COMMAND_DATA + 2]), command.getPayload()[COMMAND_DATA] | (command.getPayload()[COMMAND_DATA + 1] << 8));
-                if(payload_data[COMMAND_RESPONSE] == COMMAND_ERROR) Console::log("ERROR!");
+            if(command.getPayloadSize() <= BLOCK_SIZE + 2 + 1) {
+                setBlock(&(command.getDataPayload()[COMMAND_DATA + 2]), command.getDataPayload()[COMMAND_DATA] | (command.getDataPayload()[COMMAND_DATA + 1] << 8));
+                if(payload_data[0] == NO_ERROR) Console::log("BLOCK!");
             } else throw_error(PARAMETER_MISMATCH);
             break;
 
         case CHECK_MD5:
-            if(command.getSize() == PAYLOAD_SIZE_OFFSET + 1) {
-                if(command.getPayload()[COMMAND_DATA] == 1 || command.getPayload()[COMMAND_DATA] == 2) {
-                    checkMD5(command.getPayload()[COMMAND_DATA]);
-                    if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) Console::log("MD5 is correct!");
+            if(command.getPayloadSize() == 1 + 1) {
+                if(command.getDataPayload()[COMMAND_DATA] == 1 || command.getDataPayload()[COMMAND_DATA] == 2) {
+                    checkMD5(command.getDataPayload()[COMMAND_DATA]);
+                    if(payload_data[0] == NO_ERROR) Console::log("MD5 is correct!");
                 } else throw_error(SLOT_OUT_OF_RANGE);
             } else throw_error(PARAMETER_MISMATCH);
             break;
 
         case STOP_OTA:
-            if(command.getSize() == PAYLOAD_SIZE_OFFSET) {
+            if(command.getPayloadSize() == 1) {
                 stopOTA();
-                if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) Console::log("OTA is stopped!");
+                if(payload_data[0] == NO_ERROR) Console::log("OTA is stopped!");
             } else throw_error(PARAMETER_MISMATCH);
             break;
 
         case ERASE_SLOT:
-            if(command.getSize() == PAYLOAD_SIZE_OFFSET + 1) {
+            Console::log("DataPayloadSize: %d", command.getPayloadSize());
+            if(command.getPayloadSize() == 1 + 1) {
                 if((state_flags & ERASE_FLAG) == 0) {
-                    if(command.getPayload()[COMMAND_DATA] == 1 || command.getPayload()[COMMAND_DATA] == 2) {
-                        slot_erase = command.getPayload()[COMMAND_DATA];
+                    if(command.getDataPayload()[COMMAND_DATA] == 1 || command.getDataPayload()[COMMAND_DATA] == 2) {
+                        slot_erase = command.getDataPayload()[COMMAND_DATA];
                         state_flags |= ERASE_FLAG;
                         Console::log("Are you sure(13)?");
                     } else throw_error(SLOT_OUT_OF_RANGE);
                 } else {
-                    if(command.getPayload()[COMMAND_DATA] == ACKNOWLEDGE) {
+                    if(command.getDataPayload()[COMMAND_DATA] == ACKNOWLEDGE) {
                         eraseSlot(slot_erase);
-                        if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) Console::log("Slot is erased!");
+                        if(payload_data[0] == NO_ERROR) Console::log("Slot is erased!");
                     } else throw_error(PARAMETER_MISMATCH);
                 }
             } else throw_error(PARAMETER_MISMATCH);
             break;
         case SET_BOOT_SLOT:
-            if(command.getSize() == PAYLOAD_SIZE_OFFSET + 2) {
-                if(command.getPayload()[COMMAND_DATA] < 3) {
-                    setBootSlot(command.getPayload()[COMMAND_DATA], command.getPayload()[COMMAND_DATA + 1]);
-                    if(payload_data[COMMAND_RESPONSE] != COMMAND_ERROR) Console::log("Slot code executed successfully!");
+            if(command.getPayloadSize() == 2 + 1) {
+                if(command.getDataPayload()[COMMAND_DATA] < 3) {
+                    setBootSlot(command.getDataPayload()[COMMAND_DATA], command.getDataPayload()[COMMAND_DATA + 1]);
+                    if(payload_data[0] == NO_ERROR) Console::log("Slot code executed successfully!");
                 } else throw_error(SLOT_OUT_OF_RANGE);
             } else throw_error(PARAMETER_MISMATCH);
             break;
         case GET_MISSED_BLOCKS:
-            if(command.getSize() == PAYLOAD_SIZE_OFFSET) {
+            if(command.getPayloadSize() == 1) {
                 getMissedBlocks();
             } else throw_error(PARAMETER_MISMATCH);
             break;
         case GET_MISSED_CRC:
-            if(command.getSize() == PAYLOAD_SIZE_OFFSET) {
+            if(command.getPayloadSize() == 1) {
                 getMissedCRCs();
             } else throw_error(PARAMETER_MISMATCH);
             break;
         case GET_VERSION_NUMBER:
-            if(command.getSize() == PAYLOAD_SIZE_OFFSET) {
+            if(command.getPayloadSize() == 1) {
                 getVersionNumber();
             } else throw_error(PARAMETER_MISMATCH);
             break;
@@ -188,7 +185,7 @@ bool SoftwareUpdateService::process(DataMessage &command, DataMessage &workingBu
             break;
         }
 
-        workingBuffer.setSize(payload_size);
+        workingBuffer.setPayloadSize(payload_size);
 
         // command processed
         return true;
@@ -202,20 +199,19 @@ bool SoftwareUpdateService::process(DataMessage &command, DataMessage &workingBu
 void SoftwareUpdateService::getVersionNumber(){
     Console::log("SoftwareVersionService: Software Version Request");
     // respond to ping
-    payload_size = 2;
-    payload_data[COMMAND_RESPONSE] = SERVICE_RESPONSE_REPLY;
-    payload_data[2] = Bootloader::getCurrentSlot();
+    payload_size = 1;
+    payload_data[0] = Bootloader::getCurrentSlot();
     if(this->hasVersionNumber == true){
-        payload_size = 11;
+        payload_size = 9;
         Console::log("Has SW Version: %x%x%x%x%x%x%x%x", versionNumber[0],versionNumber[1],versionNumber[2],versionNumber[3],versionNumber[4],versionNumber[5],versionNumber[6],versionNumber[7]);
-        payload_data[3] = this->versionNumber[0];
-        payload_data[4] = this->versionNumber[1];
-        payload_data[5] = this->versionNumber[2];
-        payload_data[6] = this->versionNumber[3];
-        payload_data[7] = this->versionNumber[4];
-        payload_data[8] = this->versionNumber[5];
-        payload_data[9] = this->versionNumber[6];
-        payload_data[10] = this->versionNumber[7];
+        payload_data[1] = this->versionNumber[0];
+        payload_data[2] = this->versionNumber[1];
+        payload_data[3] = this->versionNumber[2];
+        payload_data[4] = this->versionNumber[3];
+        payload_data[8] = this->versionNumber[4];
+        payload_data[6] = this->versionNumber[5];
+        payload_data[7] = this->versionNumber[6];
+        payload_data[8] = this->versionNumber[7];
     }
 }
 
@@ -264,8 +260,8 @@ void SoftwareUpdateService::startOTA(unsigned char slot_number, bool allow_resum
                 fram->write(UPDATE_PROGRESS_BLOCKS, blocks_received, UPDATE_PROGRESS_CHECKLIST_SIZE);
 
                 //write the Cmd Reply:
-                payload_size = 2;
-                payload_data[COMMAND_RESPONSE] = SERVICE_RESPONSE_REPLY;
+                payload_size = 1;
+                payload_data[0] = NO_ERROR;
 
             } else if((slotState & 0x03) == PARTIAL) { //slot is not empty but partially updated
                 // first check if the partially updated slot Aligns with current progress and check for resume:
@@ -302,8 +298,8 @@ void SoftwareUpdateService::startOTA(unsigned char slot_number, bool allow_resum
                         Console::log("Update Resumed!!");
 
                         //write Command Reply:
-                        payload_size = 2;
-                        payload_data[COMMAND_RESPONSE] = SERVICE_RESPONSE_REPLY;
+                        payload_size = 1;
+                        payload_data[0] = NO_ERROR;
 
                     }else{ // decided not to resume but slot is currently updating
                         return throw_error(UPDATE_ALREADY_STARTED);
@@ -344,9 +340,9 @@ void SoftwareUpdateService::setMetadata(unsigned char* metadata) {
                 }
                 Console::log("METADATA RECEIVED, Status: 0x%x", (int)state_flags);
 
-                //set Response
-                payload_size = 2;
-                payload_data[COMMAND_RESPONSE] = SERVICE_RESPONSE_REPLY;
+                //write the Cmd Reply:
+                payload_size = 1;
+                payload_data[0] = NO_ERROR;
 
             } else return throw_error(UPDATE_TO_BIG);
         } else return throw_error(METADATA_ALREADY_RECEIVED);
@@ -354,14 +350,14 @@ void SoftwareUpdateService::setMetadata(unsigned char* metadata) {
 }
 
 void SoftwareUpdateService::getMetadata(unsigned char slot_number) {
-    payload_size = 2 + METADATA_SIZE ;
-    payload_data[COMMAND_RESPONSE] = SERVICE_RESPONSE_REPLY;
+    payload_size = 1 + METADATA_SIZE ;
+    payload_data[0] = NO_ERROR;
 
     if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
     if(slot_number == 1){
-        fram->read(SLOT1_METADATA, &payload_data[COMMAND_METHOD], METADATA_SIZE);
+        fram->read(SLOT1_METADATA, &payload_data[1], METADATA_SIZE);
     }else if(slot_number == 2){
-        fram->read(SLOT2_METADATA, &payload_data[COMMAND_METHOD], METADATA_SIZE);
+        fram->read(SLOT2_METADATA, &payload_data[1], METADATA_SIZE);
     }
 }
 
@@ -410,8 +406,8 @@ void SoftwareUpdateService::setPartialCRCs(unsigned char* crc_block, unsigned ch
                 }
 
                 //set Response
-                payload_size = 2;
-                payload_data[COMMAND_RESPONSE] = SERVICE_RESPONSE_REPLY;
+                payload_size = 1;
+                payload_data[0] = NO_ERROR;
 
             } else return throw_error(PARAMETER_MISMATCH);
         } else return throw_error(METADATA_NOT_RECEIVED);
@@ -455,8 +451,9 @@ void SoftwareUpdateService::setBlock(unsigned char* data_block, uint16_t block_o
                             }
                         }
 
-                        payload_size = 2;
-                        payload_data[COMMAND_RESPONSE] = SERVICE_RESPONSE_REPLY;
+                        //set Response
+                        payload_size = 1;
+                        payload_data[0] = NO_ERROR;
 
                     } else {
                         return throw_error(CRC_MISMATCH);
@@ -497,8 +494,6 @@ bool SoftwareUpdateService::checkPartialCRC(unsigned char* data_block, uint16_t 
 }
 
 void SoftwareUpdateService::checkMD5(unsigned char slot_number) {
-    payload_size = PAYLOAD_SIZE_OFFSET + 1;
-
     unsigned char status = 0;
 
     if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
@@ -559,9 +554,11 @@ void SoftwareUpdateService::checkMD5(unsigned char slot_number) {
             fram->write(SLOT2_METADATA_STATE, &status, 1);
         }
 
-        payload_size = 3;
-        payload_data[COMMAND_RESPONSE] = SERVICE_RESPONSE_REPLY;
-        payload_data[COMMAND_RESPONSE + 1] = equal;
+        //set Response
+        payload_size = 1;
+        payload_data[0] = NO_ERROR;
+        payload_data[1] = equal;
+
     } else return throw_error(SLOT_NOT_PROGRAMMED);
 }
 
@@ -588,14 +585,14 @@ void SoftwareUpdateService::stopOTA() {
         if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
         fram->write(UPDATE_PROGRESS_STATE, &state_flags, 1);
 
-        payload_size = 2;
-        payload_data[COMMAND_RESPONSE] = SERVICE_RESPONSE_REPLY;
+        //set Response
+        payload_size = 1;
+        payload_data[0] = NO_ERROR;
 
     } else return throw_error(UPDATE_NOT_STARTED);
 }
 
 void SoftwareUpdateService::eraseSlot(unsigned char slot) {
-    payload_size = PAYLOAD_SIZE_OFFSET + 1;
     if(Bootloader::getCurrentSlot() != slot ) { //dont erase yourself, very bad idea
         if((state_flags & UPDATE_FLAG) == 0) { //check if update is not in progress
             //delete MetaData
@@ -616,8 +613,9 @@ void SoftwareUpdateService::eraseSlot(unsigned char slot) {
            if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
            fram->write(UPDATE_PROGRESS_STATE, &state_flags, 1);
 
-           payload_size = 2;
-           payload_data[COMMAND_RESPONSE] = SERVICE_RESPONSE_REPLY;
+           //set Response
+           payload_size = 1;
+           payload_data[0] = NO_ERROR;
 
         } else return throw_error(UPDATE_ALREADY_STARTED);
     } else return throw_error(SELF_ACTION);
@@ -627,8 +625,9 @@ void SoftwareUpdateService::setBootSlot(unsigned char slot, bool permanent) {
     if(slot == 0) { //if setting SLOT0 (fallback slot), no worries, just do it.
         uint8_t target_slot = (permanent) ? BOOT_PERMANENT_FLAG : 0;
         fram->write(BOOTLOADER_TARGET_REG, &target_slot, 1);
-        payload_size = 2;
-        payload_data[COMMAND_RESPONSE] = SERVICE_RESPONSE_REPLY;
+        //set Response
+        payload_size = 1;
+        payload_data[0] = NO_ERROR;
 
         this->setPostFunc([](){ MAP_SysCtl_rebootDevice(); });
     } else {
@@ -647,8 +646,9 @@ void SoftwareUpdateService::setBootSlot(unsigned char slot, bool permanent) {
         if((slotFlag & FULL) == FULL) {
             uint8_t target_slot = slot | ((permanent) ? BOOT_PERMANENT_FLAG : 0);
             fram->write(BOOTLOADER_TARGET_REG, &target_slot, 1);
-            payload_size = 2;
-            payload_data[COMMAND_RESPONSE] = SERVICE_RESPONSE_REPLY;
+            //set Response
+            payload_size = 1;
+            payload_data[0] = NO_ERROR;
 
             this->setPostFunc([](){ MAP_SysCtl_rebootDevice();});
         } else return throw_error(SLOT_NOT_PROGRAMMED);
@@ -679,8 +679,9 @@ void SoftwareUpdateService::getMissedBlocks() {
     if((state_flags & UPDATE_FLAG) == UPDATE_FLAG) {
 
         int missed_pointer = 0;
-        payload_size = 2;
-        payload_data[COMMAND_RESPONSE] = SERVICE_RESPONSE_REPLY;
+        //set Response
+        payload_size = 1;
+        payload_data[0] = NO_ERROR;
 
         switch(state_flags) {
             case FULL:
@@ -693,7 +694,7 @@ void SoftwareUpdateService::getMissedBlocks() {
         }
 
         //get up to 32 missed blocks
-        while(payload_size < (2*32+3)){
+        while(payload_size < (2*32+1)){
 
             if(missed_pointer == num_update_blocks) { //if everything is checked, just return
                 missed_pointer = 0;
@@ -715,8 +716,9 @@ void SoftwareUpdateService::getMissedCRCs() {
     if((state_flags & UPDATE_FLAG) == UPDATE_FLAG) {
 
         int missed_pointer = 0;
-        payload_size = 2;
-        payload_data[COMMAND_RESPONSE] = SERVICE_RESPONSE_REPLY;
+        //set Response
+        payload_size = 1;
+        payload_data[0] = NO_ERROR;
 
         switch(state_flags) {
             case FULL:
@@ -729,7 +731,7 @@ void SoftwareUpdateService::getMissedCRCs() {
         }
 
         //get up to 32 missed blocks
-        while(payload_size < (2*32+3)){
+        while(payload_size < (2*32+1)){
 
             if(missed_pointer == num_update_blocks) { //if everything is checked, just return
                 missed_pointer = 0;
@@ -844,7 +846,6 @@ void SoftwareUpdateService::throw_error(unsigned char error) {
         break;
     }
 
-    payload_size = PAYLOAD_SIZE_OFFSET;
-    payload_data[COMMAND_RESPONSE] = COMMAND_ERROR;
-    payload_data[COMMAND_METHOD] = error;
+    payload_size = 1;
+    payload_data[0] = NO_ERROR;
 }

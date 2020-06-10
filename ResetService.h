@@ -15,10 +15,10 @@
 #include "FRAMMap.h"
 #include "Bootloader.h"
 
-#define RESET_SERVICE           19
-#define RESET_ERROR              0
-#define RESET_REQUEST            1
-#define RESET_RESPONSE           2
+#define RESET_SERVICE            19
+
+#define ERROR_NO_ERROR           0
+#define ERROR_UNKNOWN_COMMAND    1
 
 #define RESET_SOFT               1
 #define RESET_HARD               2

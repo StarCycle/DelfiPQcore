@@ -10,10 +10,13 @@
 
 #include "Service.h"
 #include "Task.h"
-#include "PingService.h"
+#include "Service.h"
 #include "Console.h"
 
-template <class Frame_Type>
+#define ERROR_UNKNOWN_SERVICE       1
+
+
+template <class Frame_Type, class Message_Type>
 class CommandHandler: public Task
 {
  protected:
@@ -21,7 +24,7 @@ class CommandHandler: public Task
      Service** services;
      int servicesCount;
      Frame_Type rxBuffer, txBuffer;
-     DataMessage rxMsg, txMsg;
+     Message_Type rxMsg, txMsg;
      void (*onValidCmd)( void );
 
      virtual void run()
@@ -72,9 +75,11 @@ class CommandHandler: public Task
              // invalid payload size
              // what should we do here?
              Console::log("Invalid Command, size must be > 1");
-             txBuffer.setPayloadSize(2);
-             txBuffer.getPayload()[0] = 0;
-             txBuffer.getPayload()[1] = 0;
+             txMsg.setService(0);
+             txMsg.setMessageType(SERVICE_RESPONSE_REPLY);
+             txMsg.setPayloadSize(1);
+             txMsg.getDataPayload()[0] = ERROR_UNKNOWN_SERVICE;
+
              bus.transmit(txBuffer);
              return;
          }
@@ -92,7 +97,9 @@ class CommandHandler: public Task
      void received( DataFrame &newFrame )
      {
          newFrame.copy(rxBuffer);
-         notify();
+         if(rxMsg.getMessageType() == SERVICE_RESPONSE_REQUEST){
+             notify();
+         }
      };
 
      void onValidCommand(void (*function)( void ))

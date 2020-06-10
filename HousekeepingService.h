@@ -44,35 +44,23 @@ protected:
  public:
     bool process( DataMessage &command, DataMessage &workingBuffer )
     {
-        if (command.getPayload()[0] == HOUSEKEEPING_SERVICE)
+        if (command.getService() == HOUSEKEEPING_SERVICE)
         {
             // prepare response frame
             //workingBuffer.setDestination(command.getSource());
             //workingBuffer.setSource(interface.getAddress());
-            workingBuffer.getPayload()[0] = HOUSEKEEPING_SERVICE;
+            workingBuffer.setService(HOUSEKEEPING_SERVICE);
 
-            if (command.getPayload()[1] == SERVICE_RESPONSE_REQUEST)
+            Console::log("HousekeepingService: Request");
+            // respond to housekeeping request
+            workingBuffer.setMessageType(SERVICE_RESPONSE_REPLY);
+
+            for (int i = 0; i < getTelemetry()->size(); i++)
             {
-                Console::log("HousekeepingService: Request");
-
-                // respond to housekeeping request
-                workingBuffer.getPayload()[1] = SERVICE_RESPONSE_REPLY;
-                for (int i = 0; i < getTelemetry()->size(); i++)
-                {
-                    workingBuffer.getPayload()[i + 2] = getTelemetry()->getArray()[i];
-                }
-                workingBuffer.setSize(2 + getTelemetry()->size());
+                workingBuffer.getDataPayload()[i] = getTelemetry()->getArray()[i];
             }
-            else
-            {
-                // unknown request
-                workingBuffer.getPayload()[1] = SERVICE_RESPONSE_ERROR;
-                workingBuffer.setSize(2);
-            }
+            workingBuffer.setPayloadSize(getTelemetry()->size());
 
-            // send response
-            //interface.transmit(workingBuffer);
-            // command processed
             return true;
         }
         else

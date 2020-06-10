@@ -158,48 +158,40 @@ void ResetService::kickExternalWatchDog()
  */
 bool ResetService::process(DataMessage &command, DataMessage &workingBuffer)
 {
-    if (command.getPayload()[0] == RESET_SERVICE)
+    if (command.getService() == RESET_SERVICE)
     {
         // prepare response frame
-        workingBuffer.setSize(3);
-        workingBuffer.getPayload()[0] = RESET_SERVICE;
+        workingBuffer.setService(RESET_SERVICE);
+        workingBuffer.setMessageType(SERVICE_RESPONSE_REPLY);
 
-        if (command.getPayload()[1] == SERVICE_RESPONSE_REQUEST)
+        switch(command.getDataPayload()[0])
         {
-            workingBuffer.getPayload()[2] = command.getPayload()[2];
-            switch(command.getPayload()[2])
-            {
-                case RESET_SOFT:
-                    workingBuffer.getPayload()[1] = SERVICE_RESPONSE_REPLY;
+            case RESET_SOFT:
+                workingBuffer.setPayloadSize(1);
+                workingBuffer.getDataPayload()[0] = ERROR_NO_ERROR;
+                // after a response has been sent, reset the MCU
+                this->setPostFunc(_forceSoftReset);
+                break;
 
-                    // after a response has been sent, reset the MCU
-                    this->setPostFunc(_forceSoftReset);
-                    break;
+            case RESET_HARD:
+                workingBuffer.setPayloadSize(1);
+                workingBuffer.getDataPayload()[0] = ERROR_NO_ERROR;
+                // after a response has been sent, force the external watch-dog to reset the MCU
+                this->setPostFunc(_forceHardReset);
+                break;
 
-                case RESET_HARD:
-                    workingBuffer.getPayload()[1] = SERVICE_RESPONSE_REPLY;
+                // not implemented yet, give error to notify it
+            /*case RESET_POWERCYCLE:
+                workingBuffer.getPayload()[1] = RESET_RESPONSE;
 
-                    // after a response has been sent, force the external watch-dog to reset the MCU
-                    this->setPostFunc(_forceHardReset);
-                    break;
+                // after a response has been sent, force a power cycle
+                this->setPostFunc(_forcePowerCycle);
+                break;*/
 
-                    // not implemented yet, give error to notify it
-                /*case RESET_POWERCYCLE:
-                    workingBuffer.getPayload()[1] = RESET_RESPONSE;
-
-                    // after a response has been sent, force a power cycle
-                    this->setPostFunc(_forcePowerCycle);
-                    break;*/
-
-                default:
-                    workingBuffer.getPayload()[1] = SERVICE_RESPONSE_ERROR;
-                    break;
-            }
-        }
-        else
-        {
-            // unknown request
-            workingBuffer.getPayload()[1] = RESET_ERROR;
+            default:
+                workingBuffer.setPayloadSize(1);
+                workingBuffer.getDataPayload()[0] = ERROR_UNKNOWN_COMMAND;
+                break;
         }
 
         // command processed
