@@ -20,8 +20,14 @@ private:
     MB85RS* FRAM;
 
 public:
-    FRAMBackedVar(MB85RS* fram, unsigned long address, bool updateFromFram){
-        FRAM = fram;
+    FRAMBackedVar(){
+        FRAM = 0;
+        FRAMAddress = 0;
+        RAMcopy = 0;
+    }
+
+    FRAMBackedVar(MB85RS& fram, unsigned long address, bool updateFromFram){
+        FRAM = &fram;
         FRAMAddress = address;
 
         if(updateFromFram){
@@ -31,6 +37,19 @@ public:
             FRAM->write(FRAMAddress, (unsigned char*)&RAMcopy, sizeof(RAMcopy));
         }
     }
+
+    void init(MB85RS& fram, unsigned long address, bool updateFromFram){
+        FRAM = &fram;
+        FRAMAddress = address;
+
+        if(updateFromFram){
+            FRAM->read(FRAMAddress, (unsigned char*)&RAMcopy, sizeof(RAMcopy));
+        }else{
+            RAMcopy = 0;
+            FRAM->write(FRAMAddress, (unsigned char*)&RAMcopy, sizeof(RAMcopy));
+        }
+    }
+
 
     varType read(){
         return RAMcopy;
