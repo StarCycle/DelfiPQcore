@@ -30,10 +30,10 @@ unsigned char Bootloader::getCurrentSlot(){
         case 0x00:
             slotNumber = 0;
             break;
-        case 0x02:
+        case 0x10:
             slotNumber = 1;
             break;
-        case 0x03:
+        case 0x18:
             slotNumber = 2;
             break;
         default: //should never happen
@@ -106,10 +106,10 @@ void Bootloader::JumpSlot(){
                         resetPtr = (uint32_t*)(0x00000 + 4);
                         break;
                     case 1:
-                        resetPtr = (uint32_t*)(0x20000 + 4);
+                        resetPtr = (uint32_t*)(0x100000 + 4);
                         break;
                     case 2:
-                        resetPtr = (uint32_t*)(0x30000 + 4);
+                        resetPtr = (uint32_t*)(0x180000 + 4);
                         break;
                     default:
                         Console::log("+ BOOTLOADER - Error: target slot not valid!");

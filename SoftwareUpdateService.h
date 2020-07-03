@@ -26,7 +26,7 @@ extern "C" {
 #define FRAM_SIZE               32768
 #define BLOCK_SIZE              32
 #define MD5_SIZE                16
-#define BANK_SIZE               131072
+#define BANK_SIZE               0x200000/2
 #define SLOT_SIZE               (BANK_SIZE / 2)
 #define SECTORS_PER_SLOT        16
 #define SECTOR_SIZE             (SLOT_SIZE / SECTORS_PER_SLOT)
@@ -89,7 +89,7 @@ extern "C" {
 #define UPDATE_PROGRESS_CRC             UPDATE_PROGRESS_STATE + 1
 #define UPDATE_PROGRESS_BLOCKS          UPDATE_PROGRESS_CRC + UPDATE_PROGRESS_CHECKLIST_SIZE
 
-#define BANK1_ADDRESS           0x20000
+#define BANK1_ADDRESS           0x00100000
 #define CURRENT_SLOT_ADDRESS    0x20000000
 
 #define ACKNOWLEDGE             13

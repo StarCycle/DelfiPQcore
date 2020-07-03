@@ -440,33 +440,16 @@ void SoftwareUpdateService::setBlock(unsigned char* data_block, uint16_t block_o
                         //write block to FLASH
                         unsigned int memloc;
                         unsigned int sector =  1 << (((block_offset * BLOCK_SIZE + (update_slot - 1) * SLOT_SIZE)) / SECTOR_SIZE);
-#if defined (__MSP432P401R__)
-                        if(!MAP_FlashCtl_unprotectSector(FLASH_MAIN_MEMORY_SPACE_BANK1, sector)) return throw_error(NO_SLOT_ACCESS);
-#elif defined (__MSP432P4111__)
+
                         //convert sector back to memory location
                         // memloc = offset_bank1 + sector * sector_size
-                        memloc = (FLASH_A_MAIN_MEMORY_SPACE_BANK1 + (update_slot - 1) * SLOT_SIZE + block_offset * BLOCK_SIZE);
+                        memloc = (BANK1_ADDRESS + (update_slot - 1) * SLOT_SIZE + block_offset * BLOCK_SIZE);
                         // this looks like a weird construction, however memory is appearantly still sector based:
                         // http://dev.ti.com/tirex/explore/node?node=ACjtNKxGz96GtFvTawWu-g__z-lQYNj__LATEST
-                        if(!MAP_FlashCtl_A_unprotectMemory(memloc, memloc + BLOCK_SIZE)) return throw_error(NO_SLOT_ACCESS);
-#endif
+                        if(!MAP_FlashCtl_A_unprotectMemory(memloc, memloc + BLOCK_SIZE - 1)) return throw_error(NO_SLOT_ACCESS);
+                        if(!MAP_FlashCtl_A_programMemory(data_block, (void*) memloc, BLOCK_SIZE)) return throw_error(NO_SLOT_ACCESS);
+                        if(!MAP_FlashCtl_A_protectMemory(memloc, memloc + BLOCK_SIZE - 1)) return throw_error(NO_SLOT_ACCESS);
 
-#if defined (__MSP432P401R__)
-                        if(!MAP_FlashCtl_programMemory(data_block, (void*)(BANK1_ADDRESS + (update_slot - 1) * SLOT_SIZE + block_offset * BLOCK_SIZE), BLOCK_SIZE)) return throw_error(NO_SLOT_ACCESS);
-#elif defined (__MSP432P4111__)
-                        if(!MAP_FlashCtl_A_programMemory(data_block, (void*)(FLASH_A_MAIN_MEMORY_SPACE_BANK1 + (update_slot - 1) * SLOT_SIZE + block_offset * BLOCK_SIZE), BLOCK_SIZE)) return throw_error(NO_SLOT_ACCESS);
-#endif
-
-#if defined (__MSP432P401R__)
-                        if(!MAP_FlashCtl_protectSector(FLASH_MAIN_MEMORY_SPACE_BANK1, sector)) return throw_error(NO_SLOT_ACCESS);
-#elif defined (__MSP432P4111__)
-                        //convert sector back to memory location
-                        // memloc = offset_bank1 + sector * sector_size
-                        memloc = (FLASH_A_MAIN_MEMORY_SPACE_BANK1 + (update_slot - 1) * SLOT_SIZE + block_offset * BLOCK_SIZE);
-                        // this looks like a weird construction, however memory is appearantly still sector based:
-                        // http://dev.ti.com/tirex/explore/node?node=ACjtNKxGz96GtFvTawWu-g__z-lQYNj__LATEST
-                        if(!MAP_FlashCtl_A_protectMemory(memloc, memloc + BLOCK_SIZE)) return throw_error(NO_SLOT_ACCESS);
-#endif
                         //update checklist in RAM
                         blocks_received[block_offset / BYTE_SIZE] |= (1 << (block_offset) % BYTE_SIZE);
 
@@ -577,7 +560,7 @@ void SoftwareUpdateService::checkMD5(unsigned char slot_number) {
         for(int i = 0; i < MD5_SIZE; i++) {
             if(digest[i] != meta_crc[i]) {
                 equal = false;
-                break;
+                Console::log("MD5 InCorrect! 0x%x, expected 0x%x", digest[i], meta_crc[i]);
             }
         }
 
@@ -642,35 +625,16 @@ void SoftwareUpdateService::eraseSlot(unsigned char slot) {
            }
 
            unsigned int memloc;
+           if(slot == 1){
+               memloc = 0x100000; //slot 1 start
+           }else if(slot == 2){
+               memloc = 0x180000; //slot 2 start
+           }
 
-           //mass erase flash
-#if defined (__MSP432P401R__)
-           if(!MAP_FlashCtl_unprotectSector(FLASH_MAIN_MEMORY_SPACE_BANK1, 0xFFFF << (16 * (slot - 1)))) return throw_error(NO_SLOT_ACCESS);
-#elif defined (__MSP432P4111__)
-           //convert sector back to memory location
-           // memloc = offset_bank1 + sector * sector_size
-           memloc = FLASH_A_MAIN_MEMORY_SPACE_BANK1 + (slot - 1) * SLOT_SIZE;
-           // this looks like a weird construction, however memory is appearantly still sector based:
            // http://dev.ti.com/tirex/explore/node?node=ACjtNKxGz96GtFvTawWu-g__z-lQYNj__LATEST
-           if(!MAP_FlashCtl_A_unprotectMemory(memloc, memloc + SLOT_SIZE)) return throw_error(NO_SLOT_ACCESS);
-#endif
-
-#if defined (__MSP432P401R__)
-           if(!MAP_FlashCtl_performMassErase()) return throw_error(NO_SLOT_ACCESS);
-#elif defined (__MSP432P4111__)
+           if(!MAP_FlashCtl_A_unprotectMemory(memloc, memloc + SLOT_SIZE - 1)) return throw_error(NO_SLOT_ACCESS);
            if(!MAP_FlashCtl_A_performMassErase()) return throw_error(NO_SLOT_ACCESS);
-#endif
-
-#if defined (__MSP432P401R__)
-           if(!MAP_FlashCtl_protectSector(FLASH_MAIN_MEMORY_SPACE_BANK1, 0xFFFF << (16 * (slot - 1)))) return throw_error(NO_SLOT_ACCESS);
-#elif defined (__MSP432P4111__)
-           //convert sector back to memory location
-           // memloc = offset_bank1 + sector * sector_size
-           memloc = FLASH_A_MAIN_MEMORY_SPACE_BANK1 + (slot - 1) * SLOT_SIZE;
-           // this looks like a weird construction, however memory is appearantly still sector based:
-           // http://dev.ti.com/tirex/explore/node?node=ACjtNKxGz96GtFvTawWu-g__z-lQYNj__LATEST
-           if(!MAP_FlashCtl_A_protectMemory(memloc, memloc + SLOT_SIZE)) return throw_error(NO_SLOT_ACCESS);
-#endif
+           if(!MAP_FlashCtl_A_protectMemory(memloc, memloc + SLOT_SIZE - 1)) return throw_error(NO_SLOT_ACCESS);
 
            state_flags = 0; //destroy progress flag
            if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
