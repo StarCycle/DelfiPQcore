@@ -29,9 +29,12 @@ class ResetService: public Service
  protected:
      const unsigned long WDIPort;
      const unsigned long WDIPin;
+     const unsigned long ERPort;
+     const unsigned long ERPin;
 
  public:
      ResetService( const unsigned long port, const unsigned long pin );
+     ResetService( const unsigned long port, const unsigned long pin, const unsigned long Rport, const unsigned long Rpin );
      virtual bool process( DataMessage &command, DataMessage &workingBbuffer );
      void init();
 
@@ -39,6 +42,7 @@ class ResetService: public Service
      void kickExternalWatchDog();
      void kickInternalWatchDog();
 
+     void forcePowerCycle();
      void forceHardReset();
      void forceSoftReset();
 };
