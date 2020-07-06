@@ -7,6 +7,8 @@
 
 #include "Console.h"
 
+unsigned char errorMsg[] = "Serial port not connected\r\n";
+
 // providing an initial value to make sure we do not have a division by 0
 unsigned int Console::baudrate = 1000;
 
@@ -26,7 +28,7 @@ void Console::init( unsigned int baudrate )
 
     // Selecting P1.2 and P1.3 in UART mode
     MAP_GPIO_setAsPeripheralModuleFunctionInputPin(GPIO_PORT_P1,
-    GPIO_PIN2 | GPIO_PIN3, GPIO_PRIMARY_MODULE_FUNCTION);
+           GPIO_PIN2 | GPIO_PIN3, GPIO_PRIMARY_MODULE_FUNCTION);
 
     eUSCI_UART_Config Config;
 
@@ -58,6 +60,17 @@ void Console::init( unsigned int baudrate )
 
     /* Enable UART module */
     MAP_UART_enableModule( EUSCI_A0_BASE );
+
+    // in case the serial port is not detected, print an error message:
+    // if there was a connection problem, the message will help debugging,
+    // if there is no serial port attached, the message will not be seen
+    if (!isEnabled())
+    {
+        for(int k = 0; errorMsg[k] != 0; k++)
+        {
+            MAP_UART_transmitData( EUSCI_A0_BASE, errorMsg[k] );
+        }
+    }
 }
 
 /**
