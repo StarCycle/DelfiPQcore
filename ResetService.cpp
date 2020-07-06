@@ -202,20 +202,12 @@ bool ResetService::process(DataMessage &command, DataMessage &workingBuffer)
                 this->setPostFunc(_forceHardReset);
                 break;
 
-                // not implemented yet, give error to notify it
-            /*case RESET_POWERCYCLE:
-                workingBuffer.getPayload()[1] = RESET_RESPONSE;
-
+            case RESET_POWERCYCLE:
+                workingBuffer.setPayloadSize(1);
+                workingBuffer.getDataPayload()[0] = ERROR_NO_ERROR;
                 // after a response has been sent, force a power cycle
                 this->setPostFunc(_forcePowerCycle);
-                break;*/
-
-                case RESET_POWERCYCLE:
-                    workingBuffer.getPayload()[1] = SERVICE_RESPONSE_REPLY;
-
-                    // after a response has been sent, force a power cycle
-                    this->setPostFunc(_forcePowerCycle);
-                    break;
+                break;
 
             default:
                 workingBuffer.setPayloadSize(1);
