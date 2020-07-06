@@ -94,8 +94,6 @@ extern "C" {
 
 #define ACKNOWLEDGE             13
 
-#define PAYLOAD_SIZE_OFFSET     3
-
 //#define INT_SIZE                (sizeof(unsigned int) * 8) //in bits
 #define BYTE_SIZE               8 //in bits
 
@@ -133,16 +131,8 @@ enum commands{
 };
 
 enum command_offsets {
-    COMMAND_SERVICE,
-    COMMAND_RESPONSE,
     COMMAND_METHOD,
     COMMAND_DATA
-};
-
-enum command_states {
-    COMMAND_ERROR,
-    COMMAND_REQUEST,
-    COMMAND_REPLY
 };
 
 enum error_codes{
