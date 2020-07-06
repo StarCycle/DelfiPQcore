@@ -25,7 +25,7 @@ PeriodicTask *instanceTimerTask;
 PeriodicTask::PeriodicTask(const unsigned int count, void (*function)( void ), void (&init)( void )) :
         Task(function, init)
 {
-    this->taskCount = count/TASKNOTIFIER_PERIOD_MS;
+    this->taskCount = (count/TASKNOTIFIER_PERIOD_MS) + ((count % TASKNOTIFIER_PERIOD_MS) != 0);
 }
 
 /**
