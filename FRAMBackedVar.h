@@ -10,6 +10,7 @@
 
 #include "MB85RS.h"
 #include "Console.h"
+#include "FRAMMap.h"
 
 template <class varType>
 class FRAMBackedVar{
@@ -20,28 +21,12 @@ private:
     MB85RS* FRAM;
 
 public:
-    FRAMBackedVar(){
-        FRAM = 0;
-        FRAMAddress = 0;
-        RAMcopy = 0;
-    }
-
-    FRAMBackedVar(MB85RS& fram, unsigned long address, bool updateFromFram){
+    FRAMBackedVar(MB85RS& fram, unsigned long address){
         FRAM = &fram;
         FRAMAddress = address;
-
-        if(updateFromFram){
-            FRAM->read(FRAMAddress, (unsigned char*)&RAMcopy, sizeof(RAMcopy));
-        }else{
-            RAMcopy = 0;
-            FRAM->write(FRAMAddress, (unsigned char*)&RAMcopy, sizeof(RAMcopy));
-        }
     }
 
-    void init(MB85RS& fram, unsigned long address, bool updateFromFram){
-        FRAM = &fram;
-        FRAMAddress = address;
-
+    void init(bool updateFromFram){
         if(updateFromFram){
             FRAM->read(FRAMAddress, (unsigned char*)&RAMcopy, sizeof(RAMcopy));
         }else{
