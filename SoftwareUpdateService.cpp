@@ -662,13 +662,13 @@ void SoftwareUpdateService::setBootSlot(unsigned char slot, bool permanent) {
             payload_size = 1;
             payload_data[0] = NO_ERROR;
 
-#if defined (__MSP432P401R__)
-            this->setPostFunc([](){ MAP_SysCtl_rebootDevice();});
-#elif defined (__MSP432P4111__)
-            this->setPostFunc([](){ MAP_SysCtl_A_rebootDevice();});
-#endif
         } else return throw_error(SLOT_NOT_PROGRAMMED);
     }
+#if defined (__MSP432P401R__)
+    this->setPostFunc([](){ MAP_SysCtl_rebootDevice();});
+#elif defined (__MSP432P4111__)
+    this->setPostFunc([](){ MAP_SysCtl_A_rebootDevice();});
+#endif
 }
 
 unsigned int SoftwareUpdateService::getNumOfMissedBlocks() {
