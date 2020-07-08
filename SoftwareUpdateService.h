@@ -34,6 +34,7 @@ extern "C" {
 #define PAR_CRC_SIZE            (SLOT_SIZE / BLOCK_SIZE)
 //#define METADATA_SIZE           (MD5_SIZE + 8 + 2 + 1)
 #define MAX_BLOCK_AMOUNT        (SLOT_SIZE / BLOCK_SIZE)
+#define BYTE_SIZE               8
 
 //sizes of FRAM Data and locations
 #define METADATA_STATE_SIZE         1
@@ -55,14 +56,17 @@ extern "C" {
 #define SLOT1_METADATA_VERSION      SLOT1_METADATA_MD5 + MD5_SIZE
 #define SLOT1_METADATA_NR_OF_BLOCKS SLOT1_METADATA_VERSION + METADATA_VERSION_SIZE
 #define SLOT1_PAR_CRC               SLOT1_METADATA + METADATA_SIZE
+#define SLOT1_CRC_CHECKLIST         SLOT1_PAR_CRC + PAR_CRC_SIZE
+#define SLOT1_BLOCK_CHECKLIST       SLOT1_CRC_CHECKLIST + (MAX_BLOCK_AMOUNT/8)
 
-#define SLOT2_METADATA              SLOT1_PAR_CRC + PAR_CRC_SIZE
+#define SLOT2_METADATA              SLOT1_BLOCK_CHECKLIST + (MAX_BLOCK_AMOUNT/8)
 #define SLOT2_METADATA_STATE        SLOT2_METADATA
 #define SLOT2_METADATA_MD5          SLOT2_METADATA_STATE + METADATA_STATE_SIZE
 #define SLOT2_METADATA_VERSION      SLOT2_METADATA_MD5 + MD5_SIZE
 #define SLOT2_METADATA_NR_OF_BLOCKS SLOT2_METADATA_VERSION + METADATA_VERSION_SIZE
 #define SLOT2_PAR_CRC               SLOT2_METADATA + METADATA_SIZE
-
+#define SLOT2_CRC_CHECKLIST         SLOT1_PAR_CRC + PAR_CRC_SIZE
+#define SLOT2_BLOCK_CHECKLIST       SLOT1_CRC_CHECKLIST + (MAX_BLOCK_AMOUNT/8)
 ////
 // UPDATE_PROGRESS:
 // 1                            Byte       STATE (EMPTY/PARTIAL/FULL)
@@ -82,20 +86,9 @@ extern "C" {
 // [7]  : SlotUpdating (0x80) slot1(0) or slot2(1)
 //
 
-#define UPDATE_PROGRESS_CHECKLIST_SIZE  MAX_BLOCK_AMOUNT/BYTE_SIZE
-#define UPDATE_PROGRESS_SIZE            1 + 2 * (UPDATE_PROGRESS_CHECKLIST_SIZE)
-
-#define UPDATE_PROGRESS_STATE           SLOT2_PAR_CRC + PAR_CRC_SIZE
-#define UPDATE_PROGRESS_CRC             UPDATE_PROGRESS_STATE + 1
-#define UPDATE_PROGRESS_BLOCKS          UPDATE_PROGRESS_CRC + UPDATE_PROGRESS_CHECKLIST_SIZE
-
 #define BANK1_ADDRESS           0x20000
-#define CURRENT_SLOT_ADDRESS    0x20000000
 
 #define ACKNOWLEDGE             13
-
-//#define INT_SIZE                (sizeof(unsigned int) * 8) //in bits
-#define BYTE_SIZE               8 //in bits
 
 
 
@@ -238,17 +231,18 @@ class SoftwareUpdateService: public Service
      uint8_t versionNumber[8] = {0};
      void getVersionNumber();
 
-     unsigned char state_flags = 0;
-     unsigned char update_slot = 0;
-     unsigned char slot_erase = 0;
-     unsigned short num_update_blocks = 0;
-     unsigned short received_par_crcs = 0;
+     unsigned char state_flags = 0; //current state of update
+     unsigned char update_slot = 0; //target of update
+     unsigned char slot_erase = 0;  //flag for erasure
+     unsigned short num_update_blocks = 0; //number of expected blocks
 
      unsigned char* payload_data = 0;
      unsigned char payload_size = 0;
 
-     unsigned char blocks_received[MAX_BLOCK_AMOUNT/BYTE_SIZE] = { 0 };
-     unsigned char crc_received[MAX_BLOCK_AMOUNT/BYTE_SIZE] = { 0 };
+     unsigned char blocks_received_buffer[MAX_BLOCK_AMOUNT/8] = { 0 };  //checklist for blocks
+     unsigned char crc_received_buffer[MAX_BLOCK_AMOUNT/8] = { 0 };     //checklist for CRCs
+     //unsigned char crcs_buffer[PAR_CRC_SIZE] = { 0 };                   //copy of CRCs in RAM
+     //unsigned char metadata_buffer[METADATA_SIZE] = { 0 };              //copy of METADATA in RAM
 
      MB85RS* fram;
 };
