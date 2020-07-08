@@ -73,7 +73,7 @@ bool SoftwareUpdateService::process(DataMessage &command, DataMessage &workingBu
         case START_OTA:
             if((command.getPayloadSize() == 2) || (command.getPayloadSize() == 3)){
                 if(command.getDataPayload()[COMMAND_DATA] == 1 || command.getDataPayload()[COMMAND_DATA] == 2) {
-                    if(command.getPayloadSize() == 2){
+                    if(command.getPayloadSize() == 3){
                         startOTA(command.getDataPayload()[COMMAND_DATA], command.getDataPayload()[COMMAND_DATA+1] == 1);
                     }else{
                         startOTA(command.getDataPayload()[COMMAND_DATA], false);
@@ -219,58 +219,62 @@ void SoftwareUpdateService::startOTA(unsigned char slot_number, bool allow_resum
     if(Bootloader::getCurrentSlot() != (slot_number)) { //Warning! Do not reprogram the current program, very bad idea
 
         if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
-        fram->read(UPDATE_PROGRESS_STATE, &state_flags, 1);
 
-        if(((state_flags & UPDATE_FLAG) == 0) && !allow_resume){ //system is not already in update mode.
-            unsigned char slotState;
-            if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
-            if(slot_number == 1){
-                fram->read(SLOT1_METADATA_STATE, &slotState, 1);
-            }else if(slot_number == 2){
-                fram->read(SLOT2_METADATA_STATE, &slotState, 1);
-            }
-            Console::log("Slot State: 0x%x", (int) slotState);
-            if((slotState & 0x03) == EMPTY) {
-                Console::log("Slot is empty!");
-                slotState = PARTIAL; //Set status to Partial OTA
-                slotState |= UPDATE_FLAG;
-                if(slot_number == 2){
-                    slotState |= SLOT_SELECT_FLAG;
-                }
-                slotState &= ~(METADATA_FLAG | PARTIAL_CRC_FLAG | MD5_CORRECT_FLAG); //unset these flags, just to be sure
+        uint8_t slot_flags;
+        //get state_flags out of FRAM for target slot
+        if(slot_number == 1){
+            fram->read(SLOT1_METADATA_STATE, &slot_flags, 1);
+        }else if(slot_number == 2){
+            fram->read(SLOT2_METADATA_STATE, &slot_flags, 1);
+        }
 
-                update_slot = slot_number; //store my updateSlot in RAM
-                state_flags = slotState; //store my update progress also in RAM
+        if(!(slot_flags & FULL)){
+            if(((slot_flags & UPDATE_FLAG) == 0) || allow_resume){ //system is not already in update mode.
+                Console::log("Slot State: 0x%x", (int) state_flags);
+                if((slot_flags & UPDATE_FLAG) == 0) {
+                    Console::log("Slot is empty!");
+                    slot_flags = PARTIAL; //Set status to Partial OTA
+                    slot_flags |= UPDATE_FLAG;
+                    slot_flags &= ~(METADATA_FLAG | PARTIAL_CRC_FLAG | MD5_CORRECT_FLAG); //unset these flags, just to be sure
 
-                //write my current update Status to FRAM
-                if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
-                fram->write(UPDATE_PROGRESS_STATE, &state_flags, 1);
-                if(slot_number == 1){
-                    fram->write(SLOT1_METADATA_STATE, &state_flags, 1);
-                }else if(slot_number == 2){
-                    fram->write(SLOT2_METADATA_STATE, &state_flags, 1);
-                }
+                    update_slot = slot_number; //store my updateSlot in RAM
 
-                //initialize the checklists with zeros
-                for(int i = 0; i < (MAX_BLOCK_AMOUNT/BYTE_SIZE)+1; i++) crc_received[i] = 0;
-                for(int i = 0; i < (MAX_BLOCK_AMOUNT/BYTE_SIZE)+1; i++) blocks_received[i] = 0;
-                //write the FRAM Progress checklists
-                if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
-                fram->write(UPDATE_PROGRESS_CRC, crc_received, UPDATE_PROGRESS_CHECKLIST_SIZE);
-                fram->write(UPDATE_PROGRESS_BLOCKS, blocks_received, UPDATE_PROGRESS_CHECKLIST_SIZE);
+                    //write my current update Status to FRAM
+                    if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
+                    if(slot_number == 1){
+                        fram->write(SLOT1_METADATA_STATE, &slot_flags, 1);
+                    }else if(slot_number == 2){
+                        fram->write(SLOT2_METADATA_STATE, &slot_flags, 1);
+                    }
 
-                //write the Cmd Reply:
-                payload_size = 1;
-                payload_data[0] = NO_ERROR;
+                    //initialize the checklists with zeros
+                    for(int i = 0; i < (MAX_BLOCK_AMOUNT/BYTE_SIZE)+1; i++) crc_received_buffer[i] = 0;
+                    for(int i = 0; i < (MAX_BLOCK_AMOUNT/BYTE_SIZE)+1; i++) blocks_received_buffer[i] = 0;
+                    //write the FRAM Progress checklists
+                    if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
+                    if(slot_number == 1){
+                        fram->write(SLOT1_CRC_CHECKLIST, crc_received_buffer, (MAX_BLOCK_AMOUNT/BYTE_SIZE));
+                        fram->write(SLOT1_BLOCK_CHECKLIST, blocks_received_buffer, (MAX_BLOCK_AMOUNT/BYTE_SIZE));
+                    }else if(slot_number == 2){
+                        fram->write(SLOT1_CRC_CHECKLIST, crc_received_buffer, (MAX_BLOCK_AMOUNT/BYTE_SIZE));
+                        fram->write(SLOT1_BLOCK_CHECKLIST, blocks_received_buffer, (MAX_BLOCK_AMOUNT/BYTE_SIZE));
+                    }
 
-            } else if((slotState & 0x03) == PARTIAL) { //slot is not empty but partially updated
-                // first check if the partially updated slot Aligns with current progress and check for resume:
-                Console::log("Update still in progress, progress state: 0x%x", (int) state_flags );
-                Console::log("  -  slot state: %x", (int) slotState);
-                if((slotState == state_flags) && ((state_flags & UPDATE_FLAG) == UPDATE_FLAG )){ //check if we can resume, due to the progress status being identical to the slot status:
-                    if(allow_resume){ //if we allow resume
-                        update_slot = slot_number; //store my updateSlot in RAM
+                    //write the Cmd Reply:
+                    state_flags = slot_flags;
+                    update_slot = slot_number; //store my updateSlot in RAM
+                    payload_size = 1;
+                    payload_data[0] = NO_ERROR;
 
+                } else if(allow_resume) { //slot updated already started but resume is allowed
+                    // first check if the partially updated slot Aligns with current progress and check for resume:
+                    Console::log("Update still in progress, progress state: 0x%x", (int) slot_flags );
+
+
+
+                    if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
+
+                    if(slot_flags & METADATA_FLAG){
                         //retrieve number of blocks from MetaData
                         unsigned char nrOfBlocksBuf[METADATA_NR_OF_BLOCKS_SIZE] = {0};
                         if(slot_number == 1){
@@ -278,37 +282,32 @@ void SoftwareUpdateService::startOTA(unsigned char slot_number, bool allow_resum
                         }else if(slot_number == 2){
                             fram->read(SLOT2_METADATA_NR_OF_BLOCKS, nrOfBlocksBuf, METADATA_NR_OF_BLOCKS_SIZE);
                         }
-
                         //get nr of blocks
                         num_update_blocks = nrOfBlocksBuf[0] | (nrOfBlocksBuf[1] << 8);
-
-                        //read the FRAM Progress checklists
-                        if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
-                        fram->read(UPDATE_PROGRESS_CRC, crc_received, UPDATE_PROGRESS_CHECKLIST_SIZE);
-                        fram->read(UPDATE_PROGRESS_BLOCKS, blocks_received, UPDATE_PROGRESS_CHECKLIST_SIZE);
-
-                        //write my current update Status to FRAM
-                        if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
-                        fram->write(UPDATE_PROGRESS_STATE, &state_flags, 1);
-                        if(slot_number == 1){
-                            fram->write(SLOT1_METADATA_STATE, &state_flags, 1);
-                        }else if(slot_number == 2){
-                            fram->write(SLOT2_METADATA_STATE, &state_flags, 1);
-                        }
-                        Console::log("Update Resumed!!");
-
-                        //write Command Reply:
-                        payload_size = 1;
-                        payload_data[0] = NO_ERROR;
-
-                    }else{ // decided not to resume but slot is currently updating
-                        return throw_error(UPDATE_ALREADY_STARTED);
                     }
-                }else{ // either impossible to resume since its a different slot, or not in-update on non-empty slot
-                    return throw_error(SLOT_NOT_EMPTY);
+
+
+                    //read the FRAM Progress checklists
+                    if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
+                    if(slot_number == 1){
+                        fram->read(SLOT1_CRC_CHECKLIST, crc_received_buffer, (MAX_BLOCK_AMOUNT/BYTE_SIZE));
+                        fram->read(SLOT1_BLOCK_CHECKLIST, blocks_received_buffer, (MAX_BLOCK_AMOUNT/BYTE_SIZE));
+                    }else if(slot_number == 2){
+                        fram->read(SLOT1_CRC_CHECKLIST, crc_received_buffer, (MAX_BLOCK_AMOUNT/BYTE_SIZE));
+                        fram->read(SLOT1_BLOCK_CHECKLIST, blocks_received_buffer, (MAX_BLOCK_AMOUNT/BYTE_SIZE));
+                    }
+
+                    Console::log("Update Resumed!!");
+
+                    //write Command Reply:
+                    state_flags = slot_flags;
+                    update_slot = slot_number; //store my updateSlot in RAM
+                    payload_size = 1;
+                    payload_data[0] = NO_ERROR;
+
                 }
-            } else return throw_error(SLOT_NOT_EMPTY);
-        } else return throw_error(UPDATE_ALREADY_STARTED);
+            } else return throw_error(UPDATE_ALREADY_STARTED);
+        } else return throw_error(SLOT_NOT_EMPTY);
     } else return throw_error(SELF_ACTION);
 }
 
@@ -332,7 +331,6 @@ void SoftwareUpdateService::setMetadata(unsigned char* metadata) {
                 state_flags |= METADATA_FLAG;   //set MetaData received Flag
                 //write updates of flag to FRAM
                 if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
-                fram->write(UPDATE_PROGRESS_STATE, &state_flags, 1);
                 if(update_slot == 1){
                     fram->write(SLOT1_METADATA_STATE, &state_flags, 1);
                 }else if(update_slot == 2){
@@ -375,21 +373,17 @@ void SoftwareUpdateService::setPartialCRCs(unsigned char* crc_block, unsigned ch
                     fram->write(SLOT2_PAR_CRC + crc_offset, crc_block, num_bytes);
                 }
 
-//                serial.print("Writing CRCs: ");
-//                serial.println(num_bytes, DEC);
                 //update checklist in RAM
                 for(int k = 0; k < num_bytes; k++){
-                    crc_received[(crc_offset+k) / BYTE_SIZE] |= 1 << ((crc_offset+k) % BYTE_SIZE);
+                    crc_received_buffer[(crc_offset+k) / BYTE_SIZE] |= 1 << ((crc_offset+k) % BYTE_SIZE);
                 }
-
                 //write checklist changes to FRAM
                 if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
-//                serial.print("Writing CRC CheckList Bytes: ");
-//                serial.println(((num_bytes-1)/BYTE_SIZE) + 1, DEC);
-//                for(int i = 0; i < (((num_bytes-1)/BYTE_SIZE) + 1); i++){
-//                    serial.println(crc_received[(crc_offset) / BYTE_SIZE + i], DEC);
-//                }
-                fram->write(UPDATE_PROGRESS_CRC + (crc_offset / BYTE_SIZE), &crc_received[(crc_offset) / BYTE_SIZE], ((num_bytes-1)/BYTE_SIZE) + 1);
+                if(update_slot == 1){
+                    fram->write(SLOT1_CRC_CHECKLIST + (crc_offset / BYTE_SIZE), &crc_received_buffer[(crc_offset) / BYTE_SIZE], ((num_bytes-1)/BYTE_SIZE) + 1);
+                }else if(update_slot == 2){
+                    fram->write(SLOT2_CRC_CHECKLIST + (crc_offset / BYTE_SIZE), &crc_received_buffer[(crc_offset) / BYTE_SIZE], ((num_bytes-1)/BYTE_SIZE) + 1);
+                }
 
                 //Check if all CRCs are received
                 if(this->getNumOfMissedCRCs() == 0){
@@ -397,7 +391,6 @@ void SoftwareUpdateService::setPartialCRCs(unsigned char* crc_block, unsigned ch
                     //set Flag
                     state_flags |= PARTIAL_CRC_FLAG;
                     if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
-                    fram->write(UPDATE_PROGRESS_STATE, &state_flags, 1);
                     if(update_slot == 1){
                         fram->write(SLOT1_METADATA_STATE, &state_flags, 1);
                     }else if(update_slot == 2){
@@ -437,11 +430,15 @@ void SoftwareUpdateService::setBlock(unsigned char* data_block, uint16_t block_o
                         if(!MAP_FlashCtl_A_protectMemory(memloc, memloc + BLOCK_SIZE - 1)) return throw_error(NO_SLOT_ACCESS);
 
                         //update checklist in RAM
-                        blocks_received[block_offset / BYTE_SIZE] |= (1 << (block_offset) % BYTE_SIZE);
+                        blocks_received_buffer[block_offset / BYTE_SIZE] |= (1 << (block_offset) % BYTE_SIZE);
 
                         //write checklist changes to FRAM
                         if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
-                        fram->write(UPDATE_PROGRESS_BLOCKS + (block_offset / BYTE_SIZE), &blocks_received[block_offset / BYTE_SIZE], 1);
+                        if(update_slot == 1){
+                            fram->write(SLOT1_BLOCK_CHECKLIST + (block_offset / BYTE_SIZE), &blocks_received_buffer[block_offset / BYTE_SIZE], 1);
+                        }else if(update_slot == 2){
+                            fram->write(SLOT2_BLOCK_CHECKLIST + (block_offset / BYTE_SIZE), &blocks_received_buffer[block_offset / BYTE_SIZE], 1);
+                        }
 
                         //Check if all Blocks are received
                         if(this->getNumOfMissedBlocks() == 0){
@@ -450,7 +447,6 @@ void SoftwareUpdateService::setBlock(unsigned char* data_block, uint16_t block_o
                             state_flags &= ~(0x03);
                             state_flags |= FULL;
                             if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
-                            fram->write(UPDATE_PROGRESS_STATE, &state_flags, 1);
                             if(update_slot == 1){
                                 fram->write(SLOT1_METADATA_STATE, &state_flags, 1);
                             }else if(update_slot == 2){
@@ -541,9 +537,15 @@ void SoftwareUpdateService::checkMD5(unsigned char slot_number) {
 
         MD5_Final(digest, &md5_c);
 
+        Console::log("Stored MD5: %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d %d",
+                     meta_crc[0], meta_crc[1], meta_crc[2], meta_crc[3], meta_crc[4],
+                     meta_crc[5], meta_crc[6], meta_crc[7], meta_crc[8], meta_crc[9],
+                     meta_crc[10], meta_crc[11], meta_crc[12], meta_crc[13], meta_crc[14], meta_crc[15]);
+
         bool equal = true;
         for(int i = 0; i < MD5_SIZE; i++) {
             if(digest[i] != meta_crc[i]) {
+                Console::log("MD5 Miss on %d: Calculated: %d, Stored: &d", i, digest[i], meta_crc[i]);
                 equal = false;
                 Console::log("MD5 InCorrect! 0x%x, expected 0x%x", digest[i], meta_crc[i]);
             }
@@ -590,7 +592,6 @@ void SoftwareUpdateService::stopOTA() {
 
         state_flags = 0; //destroy progress flags
         if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
-        fram->write(UPDATE_PROGRESS_STATE, &state_flags, 1);
 
         //set Response
         payload_size = 1;
@@ -624,8 +625,6 @@ void SoftwareUpdateService::eraseSlot(unsigned char slot) {
            if(!MAP_FlashCtl_A_protectMemory(memloc, memloc + SLOT_SIZE - 1)) return throw_error(NO_SLOT_ACCESS);
 
            state_flags = 0; //destroy progress flag
-           if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
-           fram->write(UPDATE_PROGRESS_STATE, &state_flags, 1);
 
            //set Response
            payload_size = 1;
@@ -675,7 +674,7 @@ void SoftwareUpdateService::setBootSlot(unsigned char slot, bool permanent) {
 unsigned int SoftwareUpdateService::getNumOfMissedBlocks() {
     unsigned int count = 0;
     for(int missed_pointer = 0; missed_pointer < num_update_blocks; missed_pointer++) {
-        if((blocks_received[missed_pointer / BYTE_SIZE] & (1 << missed_pointer % BYTE_SIZE)) == 0) { //there is a block missing here
+        if((blocks_received_buffer[missed_pointer / BYTE_SIZE] & (1 << missed_pointer % BYTE_SIZE)) == 0) { //there is a block missing here
            count++;
         }
     }
@@ -685,7 +684,7 @@ unsigned int SoftwareUpdateService::getNumOfMissedBlocks() {
 unsigned int SoftwareUpdateService::getNumOfMissedCRCs() {
     unsigned int count = 0;
     for(int missed_pointer = 0; missed_pointer < num_update_blocks; missed_pointer++) {
-        if((crc_received[missed_pointer / BYTE_SIZE] & (1 << missed_pointer % BYTE_SIZE)) == 0) { //there is a block missing here
+        if((crc_received_buffer[missed_pointer / BYTE_SIZE] & (1 << missed_pointer % BYTE_SIZE)) == 0) { //there is a block missing here
            count++;
         }
     }
@@ -718,7 +717,7 @@ void SoftwareUpdateService::getMissedBlocks() {
                 return;
             }
 
-            if((blocks_received[missed_pointer / BYTE_SIZE] & (1 << missed_pointer % BYTE_SIZE)) == 0) { //there is a block missing here
+            if((blocks_received_buffer[missed_pointer / BYTE_SIZE] & (1 << missed_pointer % BYTE_SIZE)) == 0) { //there is a block missing here
                 memcpy(&payload_data[COMMAND_DATA + (payload_size - 2)], &missed_pointer, sizeof(uint16_t));
                 payload_size += 2;
                 Console::log("Block %d is missing", (int) missed_pointer);
@@ -755,7 +754,7 @@ void SoftwareUpdateService::getMissedCRCs() {
                 return;
             }
 
-            if((crc_received[missed_pointer / BYTE_SIZE] & (1 << missed_pointer % BYTE_SIZE)) == 0) { //there is a block missing here
+            if((crc_received_buffer[missed_pointer / BYTE_SIZE] & (1 << missed_pointer % BYTE_SIZE)) == 0) { //there is a block missing here
                 memcpy(&payload_data[COMMAND_DATA + (payload_size - 2)], &missed_pointer, sizeof(uint16_t));
                 payload_size += 2;
                 Console::log("CRC %d is missing.", (int) missed_pointer);
@@ -864,5 +863,5 @@ void SoftwareUpdateService::throw_error(unsigned char error) {
     }
 
     payload_size = 1;
-    payload_data[0] = NO_ERROR;
+    payload_data[0] = error;
 }
