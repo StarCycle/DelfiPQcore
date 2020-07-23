@@ -223,9 +223,9 @@ void SoftwareUpdateService::startOTA(unsigned char slot_number, bool allow_resum
         uint8_t slot_flags;
         //get state_flags out of FRAM for target slot
         if(slot_number == 1){
-            fram->read(SLOT1_METADATA_STATE, &slot_flags, 1);
+            fram->read(FRAM_METADATA_SLOT1_STATE, &slot_flags, 1);
         }else if(slot_number == 2){
-            fram->read(SLOT2_METADATA_STATE, &slot_flags, 1);
+            fram->read(FRAM_METADATA_SLOT2_STATE, &slot_flags, 1);
         }
 
         if(!(slot_flags & FULL)){
@@ -242,9 +242,9 @@ void SoftwareUpdateService::startOTA(unsigned char slot_number, bool allow_resum
                     //write my current update Status to FRAM
                     if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
                     if(slot_number == 1){
-                        fram->write(SLOT1_METADATA_STATE, &slot_flags, 1);
+                        fram->write(FRAM_METADATA_SLOT1_STATE, &slot_flags, 1);
                     }else if(slot_number == 2){
-                        fram->write(SLOT2_METADATA_STATE, &slot_flags, 1);
+                        fram->write(FRAM_METADATA_SLOT2_STATE, &slot_flags, 1);
                     }
 
                     //initialize the checklists with zeros
@@ -253,11 +253,11 @@ void SoftwareUpdateService::startOTA(unsigned char slot_number, bool allow_resum
                     //write the FRAM Progress checklists
                     if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
                     if(slot_number == 1){
-                        fram->write(SLOT1_CRC_CHECKLIST, crc_received_buffer, (MAX_BLOCK_AMOUNT/BYTE_SIZE));
-                        fram->write(SLOT1_BLOCK_CHECKLIST, blocks_received_buffer, (MAX_BLOCK_AMOUNT/BYTE_SIZE));
+                        fram->write(FRAM_METADATA_SLOT1_CRC_CHECKLIST, crc_received_buffer, (MAX_BLOCK_AMOUNT/BYTE_SIZE));
+                        fram->write(FRAM_METADATA_SLOT1_BLOCK_CHECKLIST, blocks_received_buffer, (MAX_BLOCK_AMOUNT/BYTE_SIZE));
                     }else if(slot_number == 2){
-                        fram->write(SLOT1_CRC_CHECKLIST, crc_received_buffer, (MAX_BLOCK_AMOUNT/BYTE_SIZE));
-                        fram->write(SLOT1_BLOCK_CHECKLIST, blocks_received_buffer, (MAX_BLOCK_AMOUNT/BYTE_SIZE));
+                        fram->write(FRAM_METADATA_SLOT1_CRC_CHECKLIST, crc_received_buffer, (MAX_BLOCK_AMOUNT/BYTE_SIZE));
+                        fram->write(FRAM_METADATA_SLOT1_BLOCK_CHECKLIST, blocks_received_buffer, (MAX_BLOCK_AMOUNT/BYTE_SIZE));
                     }
 
                     //write the Cmd Reply:
@@ -278,9 +278,9 @@ void SoftwareUpdateService::startOTA(unsigned char slot_number, bool allow_resum
                         //retrieve number of blocks from MetaData
                         unsigned char nrOfBlocksBuf[METADATA_NR_OF_BLOCKS_SIZE] = {0};
                         if(slot_number == 1){
-                            fram->read(SLOT1_METADATA_NR_OF_BLOCKS, nrOfBlocksBuf, METADATA_NR_OF_BLOCKS_SIZE);
+                            fram->read(FRAM_METADATA_SLOT1_NR_OF_BLOCKS, nrOfBlocksBuf, METADATA_NR_OF_BLOCKS_SIZE);
                         }else if(slot_number == 2){
-                            fram->read(SLOT2_METADATA_NR_OF_BLOCKS, nrOfBlocksBuf, METADATA_NR_OF_BLOCKS_SIZE);
+                            fram->read(FRAM_METADATA_SLOT2_NR_OF_BLOCKS, nrOfBlocksBuf, METADATA_NR_OF_BLOCKS_SIZE);
                         }
                         //get nr of blocks
                         num_update_blocks = nrOfBlocksBuf[0] | (nrOfBlocksBuf[1] << 8);
@@ -290,11 +290,11 @@ void SoftwareUpdateService::startOTA(unsigned char slot_number, bool allow_resum
                     //read the FRAM Progress checklists
                     if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
                     if(slot_number == 1){
-                        fram->read(SLOT1_CRC_CHECKLIST, crc_received_buffer, (MAX_BLOCK_AMOUNT/BYTE_SIZE));
-                        fram->read(SLOT1_BLOCK_CHECKLIST, blocks_received_buffer, (MAX_BLOCK_AMOUNT/BYTE_SIZE));
+                        fram->read(FRAM_METADATA_SLOT1_CRC_CHECKLIST, crc_received_buffer, (MAX_BLOCK_AMOUNT/BYTE_SIZE));
+                        fram->read(FRAM_METADATA_SLOT1_BLOCK_CHECKLIST, blocks_received_buffer, (MAX_BLOCK_AMOUNT/BYTE_SIZE));
                     }else if(slot_number == 2){
-                        fram->read(SLOT1_CRC_CHECKLIST, crc_received_buffer, (MAX_BLOCK_AMOUNT/BYTE_SIZE));
-                        fram->read(SLOT1_BLOCK_CHECKLIST, blocks_received_buffer, (MAX_BLOCK_AMOUNT/BYTE_SIZE));
+                        fram->read(FRAM_METADATA_SLOT1_CRC_CHECKLIST, crc_received_buffer, (MAX_BLOCK_AMOUNT/BYTE_SIZE));
+                        fram->read(FRAM_METADATA_SLOT1_BLOCK_CHECKLIST, blocks_received_buffer, (MAX_BLOCK_AMOUNT/BYTE_SIZE));
                     }
 
                     Console::log("Update Resumed!!");
@@ -321,9 +321,9 @@ void SoftwareUpdateService::setMetadata(unsigned char* metadata) {
                 //set METADATA in FRAM except for the state byte
                 if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
                 if(update_slot == 1){
-                    fram->write(SLOT1_METADATA_MD5, metadata, METADATA_SIZE - 1);
+                    fram->write(FRAM_METADATA_SLOT1_MD5, metadata, METADATA_SIZE - 1);
                 }else if(update_slot == 2){
-                    fram->write(SLOT2_METADATA_MD5, metadata, METADATA_SIZE - 1);
+                    fram->write(FRAM_METADATA_SLOT2_MD5, metadata, METADATA_SIZE - 1);
                 }
 
                 //update stateByte and NR of Blocks
@@ -332,9 +332,9 @@ void SoftwareUpdateService::setMetadata(unsigned char* metadata) {
                 //write updates of flag to FRAM
                 if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
                 if(update_slot == 1){
-                    fram->write(SLOT1_METADATA_STATE, &state_flags, 1);
+                    fram->write(FRAM_METADATA_SLOT1_STATE, &state_flags, 1);
                 }else if(update_slot == 2){
-                    fram->write(SLOT2_METADATA_STATE, &state_flags, 1);
+                    fram->write(FRAM_METADATA_SLOT2_STATE, &state_flags, 1);
                 }
                 Console::log("METADATA RECEIVED, Status: 0x%x", (int)state_flags);
 
@@ -353,9 +353,9 @@ void SoftwareUpdateService::getMetadata(unsigned char slot_number) {
 
     if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
     if(slot_number == 1){
-        fram->read(SLOT1_METADATA, &payload_data[1], METADATA_SIZE);
+        fram->read(FRAM_METADATA_SLOT1_STATE, &payload_data[1], METADATA_SIZE);
     }else if(slot_number == 2){
-        fram->read(SLOT2_METADATA, &payload_data[1], METADATA_SIZE);
+        fram->read(FRAM_METADATA_SLOT2_STATE, &payload_data[1], METADATA_SIZE);
     }
 }
 
@@ -368,9 +368,9 @@ void SoftwareUpdateService::setPartialCRCs(unsigned char* crc_block, unsigned ch
                 //write CRCs to FRAM
                 if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
                 if(update_slot == 1){
-                    fram->write(SLOT1_PAR_CRC + crc_offset, crc_block, num_bytes);
+                    fram->write(FRAM_METADATA_SLOT1_CRCS + crc_offset, crc_block, num_bytes);
                 }else if(update_slot == 2){
-                    fram->write(SLOT2_PAR_CRC + crc_offset, crc_block, num_bytes);
+                    fram->write(FRAM_METADATA_SLOT2_CRCS + crc_offset, crc_block, num_bytes);
                 }
 
                 //update checklist in RAM
@@ -380,9 +380,9 @@ void SoftwareUpdateService::setPartialCRCs(unsigned char* crc_block, unsigned ch
                 //write checklist changes to FRAM
                 if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
                 if(update_slot == 1){
-                    fram->write(SLOT1_CRC_CHECKLIST + (crc_offset / BYTE_SIZE), &crc_received_buffer[(crc_offset) / BYTE_SIZE], ((num_bytes-1)/BYTE_SIZE) + 1);
+                    fram->write(FRAM_METADATA_SLOT1_CRC_CHECKLIST + (crc_offset / BYTE_SIZE), &crc_received_buffer[(crc_offset) / BYTE_SIZE], ((num_bytes-1)/BYTE_SIZE) + 1);
                 }else if(update_slot == 2){
-                    fram->write(SLOT2_CRC_CHECKLIST + (crc_offset / BYTE_SIZE), &crc_received_buffer[(crc_offset) / BYTE_SIZE], ((num_bytes-1)/BYTE_SIZE) + 1);
+                    fram->write(FRAM_METADATA_SLOT2_CRC_CHECKLIST + (crc_offset / BYTE_SIZE), &crc_received_buffer[(crc_offset) / BYTE_SIZE], ((num_bytes-1)/BYTE_SIZE) + 1);
                 }
 
                 //Check if all CRCs are received
@@ -392,9 +392,9 @@ void SoftwareUpdateService::setPartialCRCs(unsigned char* crc_block, unsigned ch
                     state_flags |= PARTIAL_CRC_FLAG;
                     if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
                     if(update_slot == 1){
-                        fram->write(SLOT1_METADATA_STATE, &state_flags, 1);
+                        fram->write(FRAM_METADATA_SLOT1_STATE, &state_flags, 1);
                     }else if(update_slot == 2){
-                        fram->write(SLOT2_METADATA_STATE, &state_flags, 1);
+                        fram->write(FRAM_METADATA_SLOT2_STATE, &state_flags, 1);
                     }
                 }
 
@@ -435,9 +435,9 @@ void SoftwareUpdateService::setBlock(unsigned char* data_block, uint16_t block_o
                         //write checklist changes to FRAM
                         if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
                         if(update_slot == 1){
-                            fram->write(SLOT1_BLOCK_CHECKLIST + (block_offset / BYTE_SIZE), &blocks_received_buffer[block_offset / BYTE_SIZE], 1);
+                            fram->write(FRAM_METADATA_SLOT1_BLOCK_CHECKLIST + (block_offset / BYTE_SIZE), &blocks_received_buffer[block_offset / BYTE_SIZE], 1);
                         }else if(update_slot == 2){
-                            fram->write(SLOT2_BLOCK_CHECKLIST + (block_offset / BYTE_SIZE), &blocks_received_buffer[block_offset / BYTE_SIZE], 1);
+                            fram->write(FRAM_METADATA_SLOT2_BLOCK_CHECKLIST + (block_offset / BYTE_SIZE), &blocks_received_buffer[block_offset / BYTE_SIZE], 1);
                         }
 
                         //Check if all Blocks are received
@@ -448,9 +448,9 @@ void SoftwareUpdateService::setBlock(unsigned char* data_block, uint16_t block_o
                             state_flags |= FULL;
                             if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
                             if(update_slot == 1){
-                                fram->write(SLOT1_METADATA_STATE, &state_flags, 1);
+                                fram->write(FRAM_METADATA_SLOT1_STATE, &state_flags, 1);
                             }else if(update_slot == 2){
-                                fram->write(SLOT2_METADATA_STATE, &state_flags, 1);
+                                fram->write(FRAM_METADATA_SLOT2_STATE, &state_flags, 1);
                             }
                         }
 
@@ -481,9 +481,9 @@ bool SoftwareUpdateService::checkPartialCRC(unsigned char* data_block, uint16_t 
     }
     //read CRC
     if(update_slot == 1){
-        fram->read(SLOT1_PAR_CRC + block_offset, &crc, 1);
+        fram->read(FRAM_METADATA_SLOT1_CRCS + block_offset, &crc, 1);
     }else if(update_slot == 2){
-        fram->read(SLOT2_PAR_CRC + block_offset, &crc, 1);
+        fram->read(FRAM_METADATA_SLOT2_CRCS + block_offset, &crc, 1);
     }
 
 
@@ -501,9 +501,9 @@ void SoftwareUpdateService::checkMD5(unsigned char slot_number) {
 
     if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
     if(slot_number == 1){
-        fram->read(SLOT1_METADATA_STATE, &status, 1);
+        fram->read(FRAM_METADATA_SLOT1_STATE, &status, 1);
     }else if(slot_number == 2){
-        fram->read(SLOT2_METADATA_STATE, &status, 1);
+        fram->read(FRAM_METADATA_SLOT2_STATE, &status, 1);
     }
 
     if((status & FULL) == FULL){
@@ -517,9 +517,9 @@ void SoftwareUpdateService::checkMD5(unsigned char slot_number) {
     //    fram->read((METADATA_SIZE + PAR_CRC_SIZE) * slot_number + NUM_BLOCKS_OFFSET, (unsigned char*)&num_blocks, sizeof(uint16_t));
         unsigned char nrOfBlocksBuf[METADATA_NR_OF_BLOCKS_SIZE] = {0};
         if(slot_number == 1){
-            fram->read(SLOT1_METADATA_NR_OF_BLOCKS, nrOfBlocksBuf, METADATA_NR_OF_BLOCKS_SIZE);
+            fram->read(FRAM_METADATA_SLOT1_NR_OF_BLOCKS, nrOfBlocksBuf, METADATA_NR_OF_BLOCKS_SIZE);
         }else if(slot_number == 2){
-            fram->read(SLOT2_METADATA_NR_OF_BLOCKS, nrOfBlocksBuf, METADATA_NR_OF_BLOCKS_SIZE);
+            fram->read(FRAM_METADATA_SLOT2_NR_OF_BLOCKS, nrOfBlocksBuf, METADATA_NR_OF_BLOCKS_SIZE);
         }
 
         //get nr of blocks
@@ -528,9 +528,9 @@ void SoftwareUpdateService::checkMD5(unsigned char slot_number) {
         unsigned char meta_crc[MD5_SIZE];
         if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
         if(slot_number == 1){
-            fram->read(SLOT1_METADATA_MD5, meta_crc, MD5_SIZE);
+            fram->read(FRAM_METADATA_SLOT1_MD5, meta_crc, MD5_SIZE);
         }else if(slot_number == 2){
-            fram->read(SLOT2_METADATA_MD5, meta_crc, MD5_SIZE);
+            fram->read(FRAM_METADATA_SLOT2_MD5, meta_crc, MD5_SIZE);
         }
 
         MD5_Update(&md5_c, (unsigned char*)(BANK1_ADDRESS + (slot_number - 1) * SLOT_SIZE), num_blocks * BLOCK_SIZE);
@@ -558,9 +558,9 @@ void SoftwareUpdateService::checkMD5(unsigned char slot_number) {
         }
         if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
         if(slot_number == 1){
-            fram->write(SLOT1_METADATA_STATE, &status, 1);
+            fram->write(FRAM_METADATA_SLOT1_STATE, &status, 1);
         }else if(slot_number == 2){
-            fram->write(SLOT2_METADATA_STATE, &status, 1);
+            fram->write(FRAM_METADATA_SLOT2_STATE, &status, 1);
         }
 
         //set Response
@@ -585,9 +585,9 @@ void SoftwareUpdateService::stopOTA() {
         //Write State
         if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
         if(update_slot == 1){
-            fram->write(SLOT1_METADATA_STATE, &state_flags, 1);
+            fram->write(FRAM_METADATA_SLOT1_STATE, &state_flags, 1);
         }else if(update_slot == 2){
-            fram->write(SLOT2_METADATA_STATE, &state_flags, 1);
+            fram->write(FRAM_METADATA_SLOT2_STATE, &state_flags, 1);
         }
 
         state_flags = 0; //destroy progress flags
@@ -607,9 +607,9 @@ void SoftwareUpdateService::eraseSlot(unsigned char slot) {
            unsigned char empty[METADATA_SIZE] = { 0 };
            if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
            if(slot == 1){
-               fram->write(SLOT1_METADATA, empty, METADATA_SIZE);
+               fram->write(FRAM_METADATA_SLOT1_STATE, empty, METADATA_SIZE);
            }else if(slot == 2){
-               fram->write(SLOT2_METADATA, empty, METADATA_SIZE);
+               fram->write(FRAM_METADATA_SLOT2_STATE, empty, METADATA_SIZE);
            }
 
            unsigned int memloc;
@@ -637,7 +637,7 @@ void SoftwareUpdateService::eraseSlot(unsigned char slot) {
 void SoftwareUpdateService::setBootSlot(unsigned char slot, bool permanent) {
     if(slot == 0) { //if setting SLOT0 (fallback slot), no worries, just do it.
         uint8_t target_slot = (permanent) ? BOOT_PERMANENT_FLAG : 0;
-        fram->write(BOOTLOADER_TARGET_REG, &target_slot, 1);
+        fram->write(FRAM_BOOTLOADER_TARGET, &target_slot, 1);
         //set Response
         payload_size = 1;
         payload_data[0] = NO_ERROR;
@@ -646,9 +646,9 @@ void SoftwareUpdateService::setBootSlot(unsigned char slot, bool permanent) {
         unsigned char slotFlag = 0;
         if(!fram->ping()) return throw_error(NO_FRAM_ACCESS);
         if(slot == 1){
-            fram->read(SLOT1_METADATA_STATE, &slotFlag, 1);
+            fram->read(FRAM_METADATA_SLOT1_STATE, &slotFlag, 1);
         }else if(slot == 2){
-            fram->read(SLOT2_METADATA_STATE, &slotFlag, 1);
+            fram->read(FRAM_METADATA_SLOT2_STATE, &slotFlag, 1);
         }
         Console::log("Status flag of Target: 0x%x", (int) slotFlag);
 
@@ -657,7 +657,7 @@ void SoftwareUpdateService::setBootSlot(unsigned char slot, bool permanent) {
         if((slotFlag & MD5_CORRECT_FLAG) == 0) return throw_error(MD5_MISMATCH);
         if((slotFlag & FULL) == FULL) {
             uint8_t target_slot = slot | ((permanent) ? BOOT_PERMANENT_FLAG : 0);
-            fram->write(BOOTLOADER_TARGET_REG, &target_slot, 1);
+            fram->write(FRAM_BOOTLOADER_TARGET, &target_slot, 1);
             //set Response
             payload_size = 1;
             payload_data[0] = NO_ERROR;
