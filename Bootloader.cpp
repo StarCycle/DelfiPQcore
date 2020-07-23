@@ -52,7 +52,7 @@ void Bootloader::JumpSlot(){
     Console::log("= Current slot: %d", (int) current_slot);
 
     if(fram->ping()){
-        this->fram->read(BOOTLOADER_TARGET_REG, &target_slot, 1);
+        this->fram->read(FRAM_BOOTLOADER_TARGET, &target_slot, 1);
 
         if((current_slot & 0x7F) == 0 && (target_slot & 0x7F) != 0){ //is in main slot and preparing to 'jump'
             //check nr of Reboots to reset targetslot to 0
@@ -65,8 +65,8 @@ void Bootloader::JumpSlot(){
                Console::log("# Resetting TargetSlot");
                nrOfReboots = 0;
                fram->write(FRAM_RESET_COUNTER + (target_slot & 0x7F), &nrOfReboots, 1);
-               fram->write(BOOTLOADER_TARGET_REG, &current_slot, 1); //reset target to slot0
-               fram->read(BOOTLOADER_TARGET_REG, &target_slot, 1);
+               fram->write(FRAM_BOOTLOADER_TARGET, &current_slot, 1); //reset target to slot0
+               fram->read(FRAM_BOOTLOADER_TARGET, &target_slot, 1);
            }
 
             //check Succesful boot flag for problems
@@ -74,8 +74,8 @@ void Bootloader::JumpSlot(){
             fram->read(FRAM_BOOT_SUCCES_FLAG, &succesfulBootFlag, 1);
             if(succesfulBootFlag == 0){ //Boot is not succesful, fallback on default slot.
                 Console::log("# Last Boot unsuccesful, resetting TargetSlot");
-                this->fram->write(BOOTLOADER_TARGET_REG, &current_slot, 1); //reset target to slot0
-                this->fram->read(BOOTLOADER_TARGET_REG, &target_slot, 1);
+                this->fram->write(FRAM_BOOTLOADER_TARGET, &current_slot, 1); //reset target to slot0
+                this->fram->read(FRAM_BOOTLOADER_TARGET, &target_slot, 1);
                 succesfulBootFlag = 1; //reset bootflag.
                 fram->write(FRAM_BOOT_SUCCES_FLAG, &succesfulBootFlag, 1);
             }
@@ -87,7 +87,7 @@ void Bootloader::JumpSlot(){
 
                 if((target_slot & BOOT_PERMANENT_FLAG) == 0) {
                     Console::log("+ Preparing One-time jump");
-                    this->fram->write(BOOTLOADER_TARGET_REG, &current_slot, 1); //reset target to slot0
+                    this->fram->write(FRAM_BOOTLOADER_TARGET, &current_slot, 1); //reset target to slot0
                 } else {
                     Console::log("+ Preparing Permanent jump");
                     //this->fram->write(FRAM_TARGET_SLOT, &current_slot, 1); //reset target to slot0
@@ -114,7 +114,7 @@ void Bootloader::JumpSlot(){
                     default:
                         Console::log("+ BOOTLOADER - Error: target slot not valid!");
                         target_slot = BOOT_PERMANENT_FLAG; //set target to 0 and reboot
-                        this->fram->write(BOOTLOADER_TARGET_REG, &target_slot, 1);
+                        this->fram->write(FRAM_BOOTLOADER_TARGET, &target_slot, 1);
                         MAP_SysCtl_rebootDevice();
                         break;
                 }
