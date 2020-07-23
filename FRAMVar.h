@@ -38,12 +38,16 @@ public:
 
     varType read(){
         varType temp;
-        FRAM->read(FRAMAddress, (unsigned char*)&temp, sizeof(temp));
+        if(FRAM){
+            FRAM->read(FRAMAddress, (unsigned char*)&temp, sizeof(temp));
+        }
         return temp;
     }
 
     void save(varType value){
-        FRAM->write(FRAMAddress, (unsigned char*)&value, sizeof(value));
+        if(FRAM){
+            FRAM->write(FRAMAddress, (unsigned char*)&value, sizeof(value));
+        }
     }
 
     void write(varType value){

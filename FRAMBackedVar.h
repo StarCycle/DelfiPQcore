@@ -68,7 +68,9 @@ public:
     }
 
     void save(){
-        FRAM->write(FRAMAddress, (unsigned char*)&RAMcopy, sizeof(RAMcopy));
+        if(FRAM){
+            FRAM->write(FRAMAddress, (unsigned char*)&RAMcopy, sizeof(RAMcopy));
+        }
     }
 
     void write(varType value){
@@ -95,9 +97,9 @@ public:
 
 
     // Overload typecasting to varType;
-    operator varType() const { return RAMcopy; }
+    operator varType(){ return RAMcopy; }
     // Overload typecasting to varType*;
-    operator varType*() const { return &RAMcopy; }
+    operator varType*(){ return &RAMcopy; }
 
 
     // Overload Addition
