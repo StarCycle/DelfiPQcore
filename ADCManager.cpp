@@ -18,7 +18,7 @@ const uint32_t ADCManager::MemoryLocations[32] = {ADC_MEM0 ,ADC_MEM1 ,ADC_MEM2 ,
 void ADCManager::initADC(){
     /* Initializing ADC (MCLK/1/1) with temperature sensor routed */
     MAP_ADC14_enableModule();
-    MAP_ADC14_initModule(ADC_CLOCKSOURCE_MCLK, ADC_PREDIVIDER_1, ADC_DIVIDER_1,
+    MAP_ADC14_initModule(ADC_CLOCKSOURCE_MCLK, ADC_PREDIVIDER_4, ADC_DIVIDER_8,
             ADC_TEMPSENSEMAP);
 
     /* Configuring the sample/hold time for 192 */
@@ -112,8 +112,9 @@ void ADCManager::executeADC(){
 int ADCManager::registerADC(unsigned long ADCPin){
     if((NrOfActiveADC < 32) && (NrOfActiveADC > 0)){ //ADC Slot Available
         int newRegisteredMem = NrOfActiveADC;
-        MAP_ADC14_configureConversionMemory(MemoryLocations[newRegisteredMem], ADC_VREFPOS_INTBUF_VREFNEG_VSS, ADCPin, false);
-
+        MAP_ADC14_disableConversion();
+        MAP_ADC14_configureConversionMemory(MemoryLocations[newRegisteredMem], ADC_VREFPOS_INTBUF_VREFNEG_VSS,
+                                            ADCPin, false);
         enabledADCMem |= (1 << newRegisteredMem);
         NrOfActiveADC += 1;
         ADCManager::executeADC();
