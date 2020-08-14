@@ -10,6 +10,7 @@
 
 #include "Service.h"
 #include "Console.h"
+#include "DelfiPQcore.h"
 #include "ResetCodes.h"
 #include "MB85RS.h"
 #include "FRAMMap.h"
