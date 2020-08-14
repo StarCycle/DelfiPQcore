@@ -20,6 +20,7 @@ public:
     static void initMCU( void );
     static bool getHFOscillatorStatus( void );
     static bool getLFOscillatorStatus( void );
+    static void delayms( unsigned int ms );
 };
 
 #endif /* DELFIPQCORE_H_ */

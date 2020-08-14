@@ -92,3 +92,20 @@ bool DelfiPQcore::getLFOscillatorStatus( void )
 {
     return (MAP_CS_getInterruptStatus() & CS_LFXT_FAULT) == 0;
 }
+
+/**
+ *
+ *   Delay execution by a specified number of milliseconds
+ *
+ *   Parameters:
+ *   unsigned int          ms number of milliseconds to delay
+ *   Returns:
+ *
+ */
+void DelfiPQcore::delayms( unsigned int ms )
+{
+    for (unsigned long i = 0; i < 5300 * ms; i++)
+    {
+        __asm("  nop");
+    }
+}
