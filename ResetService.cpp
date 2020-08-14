@@ -128,9 +128,15 @@ void ResetService::refreshConfiguration()
     // cannot be disabled by mistake
     MAP_WDT_A_startTimer();
 
-    // initialize external watch-dog pins
-    MAP_GPIO_setOutputLowOnPin( WDIPort, WDIPin );
+    // reinitialize external watch-dog pins
     MAP_GPIO_setAsOutputPin( WDIPort, WDIPin );
+
+    // if the power-cycle command is supported by the hardware,
+    // reinitialize power cycle pin
+    if (ERPort != 0)
+    {
+        MAP_GPIO_setAsOutputPin( ERPort, ERPin );
+    }
 }
 
 /**
@@ -246,13 +252,15 @@ void ResetService::forcePowerCycle()
     if (ERPort != 0)
     {
         MAP_GPIO_setOutputLowOnPin( ERPort, ERPin );
+
+        // if the board does not power-cycle straight away,
+        // wait and bring the pin to rest again
+        DelfiPQcore::delayms( 100 );
+
+        MAP_GPIO_setOutputHighOnPin( ERPort, ERPin );
     }
-    else
-    {
-        // Otherwise trigger a hard reset
-        // Add WDT time-out to reset-cause register
-        MAP_ResetCtl_initiateHardResetWithSource(RESET_HARD_WDTTIME);
-    }
+    // if no power cycle pins are available, DO NOT POWER CYCLE
+    // this avoids to create false expectations
 }
 
 /**
