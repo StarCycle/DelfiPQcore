@@ -111,7 +111,8 @@ bool Console::isEnabled()
  */
 void Console::log( const char *text, ... )
 {
-    if(isEnabled()){
+    if(isEnabled())
+    {
         va_list format_args;
         va_start(format_args, text);
 
