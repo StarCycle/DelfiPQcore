@@ -97,9 +97,6 @@ void Bootloader::JumpSlot(){
                 uint8_t succesfulBootFlag = 0;
                 this->fram->write(FRAM_BOOT_SUCCES_FLAG, &succesfulBootFlag, 1);
 
-                MAP_Interrupt_disableMaster();
-                MAP_WDT_A_holdTimer();
-
                 uint32_t* resetPtr = 0;
                 switch((target_slot & 0x7F)) {
                     case 0:
@@ -115,13 +112,19 @@ void Bootloader::JumpSlot(){
                         Console::log("+ BOOTLOADER - Error: target slot not valid!");
                         target_slot = BOOT_PERMANENT_FLAG; //set target to 0 and reboot
                         this->fram->write(FRAM_BOOTLOADER_TARGET, &target_slot, 1);
-#if defined (__MSP432P401R__)
-                        MAP_SysCtl_rebootDevice();
-#elif defined (__MSP432P4111__)
-                        MAP_SysCtl_A_rebootDevice();
-#endif
+//#if defined (__MSP432P401R__)
+//                        MAP_SysCtl_rebootDevice();
+//#elif defined (__MSP432P4111__)
+//                        MAP_SysCtl_A_rebootDevice();
+//#endif
+                        Console::log("Not Jumping!");
+                        Console::log("=============================================");
+                        return;
                         break;
                 }
+                MAP_Interrupt_disableMaster();
+                MAP_WDT_A_holdTimer();
+
                 Console::log("Jumping to: 0x%x", (int) *resetPtr);
                 Console::log("=============================================");
 
