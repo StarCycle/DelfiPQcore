@@ -183,6 +183,7 @@ class SoftwareUpdateService: public Service
      SoftwareUpdateService(MB85RS &fram_in);
      SoftwareUpdateService(MB85RS &fram_in, uint8_t * versionString);
      virtual bool process( DataMessage &command, DataMessage &workingBuffer );
+     void setSWVersion(uint8_t * versionString);
  private:
      void startOTA(unsigned char slot_number, bool allow_resume);
 

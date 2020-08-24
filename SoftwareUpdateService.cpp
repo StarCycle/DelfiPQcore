@@ -50,6 +50,18 @@ SoftwareUpdateService::SoftwareUpdateService(MB85RS &fram_in, uint8_t * versionS
 
 }
 
+void SoftwareUpdateService::setSWVersion(uint8_t * versionString){
+    hasVersionNumber = true;
+    this->versionNumber[0] = NibblesToByte(HexStringToNibble(versionString[0]),HexStringToNibble(versionString[1]));
+    this->versionNumber[1] = NibblesToByte(HexStringToNibble(versionString[2]),HexStringToNibble(versionString[3]));
+    this->versionNumber[2] = NibblesToByte(HexStringToNibble(versionString[4]),HexStringToNibble(versionString[5]));
+    this->versionNumber[3] = NibblesToByte(HexStringToNibble(versionString[6]),HexStringToNibble(versionString[7]));
+    this->versionNumber[4] = NibblesToByte(HexStringToNibble(versionString[8]),HexStringToNibble(versionString[9]));
+    this->versionNumber[5] = NibblesToByte(HexStringToNibble(versionString[10]),HexStringToNibble(versionString[11]));
+    this->versionNumber[6] = NibblesToByte(HexStringToNibble(versionString[12]),HexStringToNibble(versionString[13]));
+    this->versionNumber[7] = NibblesToByte(HexStringToNibble(versionString[14]),HexStringToNibble(versionString[15]));
+}
+
 SoftwareUpdateService::SoftwareUpdateService(MB85RS &fram_in) {
     fram = &fram_in;
     hasVersionNumber = false;
