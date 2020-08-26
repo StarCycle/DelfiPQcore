@@ -222,7 +222,7 @@ void SoftwareUpdateService::getVersionNumber(){
         payload_data[2] = this->versionNumber[1];
         payload_data[3] = this->versionNumber[2];
         payload_data[4] = this->versionNumber[3];
-        payload_data[8] = this->versionNumber[4];
+        payload_data[5] = this->versionNumber[4];
         payload_data[6] = this->versionNumber[5];
         payload_data[7] = this->versionNumber[6];
         payload_data[8] = this->versionNumber[7];
