@@ -102,6 +102,17 @@ bool FRAMService::process(DataMessage &command, DataMessage &workingBuffer)
                 workingBuffer.getDataPayload()[0] = FRAM_SERVICE_INVALID_CMD;
             }
             break;
+        case 5:
+            Console::log("Erase all and Reboot");
+            fram->erase();
+            workingBuffer.setPayloadSize(1);
+            workingBuffer.getDataPayload()[0] = 0;
+#if defined (__MSP432P401R__)
+            this->setPostFunc([](){MAP_SysCtl_rebootDevice();});
+#elif defined (__MSP432P4111__)
+            this->setPostFunc([](){MAP_SysCtl_A_rebootDevice();});
+#endif
+            break;
         default:
             Console::log("Unknown Command");
             workingBuffer.setPayloadSize(1);
