@@ -214,7 +214,7 @@ void SoftwareUpdateService::getVersionNumber(){
     Console::log("SoftwareVersionService: Software Version Request");
     // respond to ping
     payload_size = 1;
-    payload_data[0] = Bootloader::getCurrentSlot();
+    payload_data[0] = NO_ERROR;
     if(this->hasVersionNumber == true){
         payload_size = 9;
         Console::log("Has SW Version: %x%x%x%x%x%x%x%x", versionNumber[0],versionNumber[1],versionNumber[2],versionNumber[3],versionNumber[4],versionNumber[5],versionNumber[6],versionNumber[7]);
