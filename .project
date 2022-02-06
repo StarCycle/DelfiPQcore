@@ -5,6 +5,7 @@
 	<projects>
 		<project>DSPI</project>
 		<project>MB85RS</project>
+		<project>CodeCoverage</project>
 	</projects>
 	<buildSpec>
 		<buildCommand>
