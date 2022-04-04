@@ -148,6 +148,7 @@ bool SoftwareUpdateService::process(DataMessage &command, DataMessage &workingBu
                     if(command.getDataPayload()[COMMAND_DATA] == 1 || command.getDataPayload()[COMMAND_DATA] == 2) {
                         slot_erase = command.getDataPayload()[COMMAND_DATA];
                         state_flags |= ERASE_FLAG;
+                        payload_data[0] = NO_ERROR;
                         Console::log("Are you sure(13)?");
                     } else throw_error(SLOT_OUT_OF_RANGE);
                 } else {
