@@ -12,6 +12,7 @@
 #include "CodeCoverageArray.h"
 
 #define CODECOVERAGE_SERVICE    97
+#define MAX_PAYLOAD_SIZE        253
 
 class CodeCoverageService: public Service
 {
@@ -21,14 +22,29 @@ class CodeCoverageService: public Service
     {
         if (command.getService() == CODECOVERAGE_SERVICE)
         {
-            workingBuffer.setService(CODECOVERAGE_SERVICE);
             Console::log("CodeCoverageService: Request");
+            workingBuffer.setService(CODECOVERAGE_SERVICE);
             workingBuffer.setMessageType(SERVICE_RESPONSE_REPLY);
-            for (int i = 0; i < 253; i++)
-            {
-                workingBuffer.getDataPayload()[i] = coverageArray[i];
+
+            switch(command.getDataPayload()[0]){
+            case 0:
+                // simply retrieve code coverage
+                for (int i = 0; i < MAX_PAYLOAD_SIZE; i++)
+                {
+                    workingBuffer.getDataPayload()[i] = coverageArray[i];
+                }
+                workingBuffer.setPayloadSize(MAX_PAYLOAD_SIZE);
+                break;
+
+            case 1:
+                // retrieve transitions
+                char region = command.getDataPayload()[1];  // range of region: 0~11
+                for (int i = 0; i < MAX_PAYLOAD_SIZE; i++)
+                {
+                    workingBuffer.getDataPayload()[i] = ((unsigned char *)lastTransition)[i + region*MAX_PAYLOAD_SIZE];
+                }
+                workingBuffer.setPayloadSize(MAX_PAYLOAD_SIZE);
             }
-            workingBuffer.setPayloadSize(253);
             return true;
         }
         else
