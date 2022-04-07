@@ -9,7 +9,7 @@
 #define CODECOVERAGESERVICE_H_
 
 #include "Service.h"
-#include "CodeCoverageService.h"
+#include "CodeCoverageArray.h"
 
 #define CODECOVERAGE_SERVICE    97
 #define MAX_PAYLOAD_SIZE        253
